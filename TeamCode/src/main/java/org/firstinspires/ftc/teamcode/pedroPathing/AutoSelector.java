@@ -1,0 +1,89 @@
+package org.firstinspires.ftc.teamcode.pedroPathing;
+
+import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.OpMode;
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.Servo;
+import com.pedropathing.follower.Follower;
+
+import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
+
+@Autonomous (name = "Auto Selector")
+public class AutoSelector extends OpMode {
+
+    enum Alliance { BLUE, RED }
+    enum StartPos { TOP, BOTTOM }
+
+    Alliance alliance = Alliance.BLUE;
+    StartPos startPos = StartPos.BOTTOM;
+
+    Follower follower;
+
+    Servo flip1;
+    DcMotor intake, launcher1, launcher2;
+
+    AutoBottomBlue bottomBlueAuto;   // the bottom blue auto
+    AutoBottomRed bottomRedAuto;     // the bottom red auto
+    AutoTopRed topRedAuto;           // the top red auto
+    AutoTopBlue topBlueAuto;         // the top blue auto
+
+    @Override
+    public void init() {
+        follower = Constants.createFollower(hardwareMap);
+
+        flip1 = hardwareMap.get(Servo.class, "flip1");     // Hardware map names
+        intake = hardwareMap.get(DcMotor.class, "intake");
+        launcher1 = hardwareMap.get(DcMotor.class, "launcher1");
+        launcher2 = hardwareMap.get(DcMotor.class, "launcher2");
+
+        bottomBlueAuto = new AutoBottomBlue(follower, flip1, intake, launcher1, launcher2);
+        bottomRedAuto = new AutoBottomRed(follower, flip1, intake, launcher1, launcher2);
+        topRedAuto = new AutoTopRed(follower, flip1, intake, launcher1, launcher2);
+        topBlueAuto = new AutoTopBlue(follower, flip1, intake, launcher1, launcher2);
+    }
+
+    @Override
+    public void init_loop() {
+        if (gamepad1.x) alliance = Alliance.BLUE;   // alliance and color selections
+        if (gamepad1.b) alliance = Alliance.RED;
+
+        if (gamepad1.a) startPos = StartPos.BOTTOM;
+        if (gamepad1.y) startPos = StartPos.TOP;
+
+        telemetry.addData("Alliance", alliance);
+        telemetry.addData("Start Position", startPos);
+        telemetry.update();
+    }
+
+    @Override
+    public void start() {
+        if (alliance == Alliance.BLUE && startPos == StartPos.BOTTOM) {   // starts the selected auto
+            bottomBlueAuto.start();
+        }
+        if (alliance == Alliance.RED && startPos == StartPos.BOTTOM) {
+            bottomRedAuto.start();
+        }
+        if (alliance == Alliance.RED && startPos == StartPos.TOP) {
+            topRedAuto.start();
+        }
+        if (alliance == Alliance.BLUE && startPos == StartPos.TOP) {
+            topBlueAuto.start();
+        }
+    }
+
+    @Override
+    public void loop() {
+        if (alliance == Alliance.BLUE && startPos == StartPos.BOTTOM) {  // updates the selected auto
+            bottomBlueAuto.update();
+        }
+        if (alliance == Alliance.RED && startPos == StartPos.BOTTOM) {
+            bottomRedAuto.update();
+        }
+        if (alliance == Alliance.RED && startPos == StartPos.TOP) {
+            topRedAuto.update();
+        }
+        if (alliance == Alliance.BLUE && startPos == StartPos.TOP) {
+            topBlueAuto.update();
+        }
+    }
+}

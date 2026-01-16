@@ -15,8 +15,8 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
 public class Constants {
-    public static FollowerConstants followerConstants = new FollowerConstants();
-          //  .mass()   // mass in kg
+    public static FollowerConstants followerConstants = new FollowerConstants()
+            .mass(1);   // mass in kg
            // .forwardZeroPowerAcceleration()   // have to be negative
           //  .lateralZeroPowerAcceleration()
           //  .translationalPIDFCoefficients(new PIDFCoefficients(0.1, 0, 0.01, 0.02))    // these are the PIDF
@@ -37,14 +37,14 @@ public class Constants {
             .rightRearMotorDirection(DcMotorSimple.Direction.FORWARD);
           //  .xVelocity()
           //  .yVelocity();
-    public static PinpointConstants localizerConstants = new PinpointConstants();
-       //     .forwardPodY()   // Y offset
-        //    .strafePodX()  // X offset
-        //    .distanceUnit(DistanceUnit.INCH)
-         //   .hardwareMapName("pinpoint")  // hardware map for pinpoint computer
-         //   .encoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD)
-         //   .forwardEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD)   // Encoder direction
-         //   .strafeEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD);
+    public static PinpointConstants localizerConstants = new PinpointConstants()
+            .forwardPodY(0)   // Y offset
+            .strafePodX(0) // X offset
+            .distanceUnit(DistanceUnit.INCH)
+            .hardwareMapName("pinpoint")  // hardware map for pinpoint computer
+            .encoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD)
+            .forwardEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD)   // Encoder direction
+            .strafeEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD);
 
     public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 1, 1);
 

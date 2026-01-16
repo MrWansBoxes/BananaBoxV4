@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.pedroPathing;
+package org.firstinspires.ftc.teamcode.pedroPathing.TeleOps;
 
 
 import static android.os.SystemClock.sleep;
@@ -21,6 +21,7 @@ import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
+import org.firstinspires.ftc.teamcode.pedroPathing.colorSensors.ColorSensorBottom;
 
 import java.util.function.Supplier;
 
@@ -29,8 +30,8 @@ import java.util.function.Supplier;
 @Configurable
 public class TopRedTeleOp extends OpMode {
 
-    ColorSensor bench = new ColorSensor();   // gets the color sensor class
-    ColorSensor.DetectedColor detectedColor;
+    ColorSensorBottom bench = new ColorSensorBottom();   // gets the color sensor class
+    ColorSensorBottom.DetectedColor detectedColor;
     private Follower follower;
     public static Pose startingPose;    //See ExampleAuto to understand how to use this
     private boolean automatedDrive;
@@ -146,13 +147,13 @@ public class TopRedTeleOp extends OpMode {
         telemetry.addData("Detected Color", detectedColor);
         //Call this once per loop
         flip1.setPosition(flickDown);
-        if (detectedColor == ColorSensor.DetectedColor.GREEN){
+        if (detectedColor == ColorSensorBottom.DetectedColor.GREEN){
             light.setPosition(lightGreen);
         }
-        else if (detectedColor == ColorSensor.DetectedColor.PURPLE){
+        else if (detectedColor == ColorSensorBottom.DetectedColor.PURPLE){
             light.setPosition(lightPurple);
         }
-        else if(detectedColor == ColorSensor.DetectedColor.UNKNOWN){
+        else if(detectedColor == ColorSensorBottom.DetectedColor.UNKNOWN){
             light.setPosition(lightOff);
         }
 

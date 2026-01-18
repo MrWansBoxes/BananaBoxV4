@@ -18,6 +18,8 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.hardware.limelightvision.LLResult;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
@@ -46,13 +48,18 @@ public class BottomBlueTeleOp extends OpMode {
     private boolean slowMode = false;
     private double slowModeMultiplier = 0.5;  // we don't use this
 
-    private Servo flip1, lift1, lift2, light;  // servos
-    private DcMotor intake, launcher1, launcher2;  // DcMotors
+    private Servo liftright, liftleft, gate, hood;  // servos
+    private DcMotor intake;
+    private DcMotorEx launcher1, launcher2;  // DcMotors
 
     int intakeflag = 0;   // these are the flags
     int launchflag = 0;
     int parkflag = 0;
     int limeflag = 0;
+
+    public double highVelocity = 2400;
+    public double lowVelocity = 1700;
+    double curTargetVelocity = highVelocity;
 
     private double launcherPowerFar1 = 0.88;
     private double launcherPowerFar2 = -0.88;
@@ -83,6 +90,9 @@ public class BottomBlueTeleOp extends OpMode {
     public static double I = 0.0;
     public static double D = 0.0;
 
+    static double F = 12.8;
+    static double P2 = 30;
+
     private double integral = 0;
     private double lastError = 0;
 
@@ -106,7 +116,19 @@ public class BottomBlueTeleOp extends OpMode {
 
         telemetry.addLine("Initialized");
 
+        launcher1 = hardwareMap.get(DcMotorEx.class,"launcher1");
+        launcher2 = hardwareMap.get(DcMotorEx.class,"launcher2");
+        liftleft = hardwareMap.get(Servo.class,"liftleft");
+        liftright = hardwareMap.get(Servo.class,"liftright");
+        gate = hardwareMap.get(Servo.class,"gate");
+        hood = hardwareMap.get(Servo.class,"hood");
+        intake = hardwareMap.get(DcMotor.class,"intake");
 
+launcher1.setDirection(DcMotorSimple.Direction.FORWARD);
+launcher2.setDirection(DcMotorSimple.Direction.REVERSE);
+PIDFCoefficients pidfCoefficients = new PIDFCoefficients(P2,0,0,F);
+launcher1.setPIDFCoefficients(DcMotorEx.RunMode.RUN_USING_ENCODER, pidfCoefficients);
+launcher2.setPIDFCoefficients(DcMotorEx.RunMode.RUN_USING_ENCODER, pidfCoefficients);
 
     }
 
@@ -114,7 +136,7 @@ public class BottomBlueTeleOp extends OpMode {
     public void start() {
       //  limelight.start();   // starts the limelight
         follower.startTeleopDrive();  // starts the driving
-      //  limelight.pipelineSwitch(1);  // pipeline 1 is for blue tracking
+      //  limelight.pipelineSwitch();  // pipeline 1 is for blue tracking
         endGameStart = getRuntime() + 103;
         trackTimer = getRuntime() + 15;
     }
@@ -122,6 +144,17 @@ public class BottomBlueTeleOp extends OpMode {
     @Override
     public void loop() {
 
+
+        double curVelocity = launcher1.getVelocity();
+        double error2 = curTargetVelocity - curVelocity;
+
+        telemetry.addData("Target Velocity", curTargetVelocity);
+        telemetry.addData("Current Velocity", "%.2f", curVelocity);
+        telemetry.addData("Error", "%.2f", error2);
+
+        PIDFCoefficients pidfCoefficients = new PIDFCoefficients(P2,0,0,F);
+        launcher1.setPIDFCoefficients(DcMotorEx.RunMode.RUN_USING_ENCODER, pidfCoefficients);
+        launcher2.setPIDFCoefficients(DcMotorEx.RunMode.RUN_USING_ENCODER, pidfCoefficients);
 
         telemetry.addData("Y", follower.getPose().getY());
         if (trackTimer <= getRuntime()) {

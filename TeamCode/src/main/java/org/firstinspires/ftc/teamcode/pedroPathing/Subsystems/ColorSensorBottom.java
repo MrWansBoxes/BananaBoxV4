@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.pedroPathing.colorSensors;
+package org.firstinspires.ftc.teamcode.pedroPathing.Subsystems;
 
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.NormalizedColorSensor;

@@ -1,8 +1,6 @@
 package org.firstinspires.ftc.teamcode.pedroPathing.TeleOps;
 
 
-import static android.os.SystemClock.sleep;
-
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
@@ -17,15 +15,14 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
-import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
-import org.firstinspires.ftc.teamcode.pedroPathing.colorSensors.ColorSensorBottom;
-import org.firstinspires.ftc.teamcode.pedroPathing.colorSensors.ColorSensorMiddle;
-import org.firstinspires.ftc.teamcode.pedroPathing.colorSensors.ColorSensorTop;
+import org.firstinspires.ftc.teamcode.pedroPathing.Subsystems.ColorSensorBottom;
+import org.firstinspires.ftc.teamcode.pedroPathing.Subsystems.ColorSensorMiddle;
+import org.firstinspires.ftc.teamcode.pedroPathing.Subsystems.ColorSensorTop;
 
 import java.util.function.Supplier;
 

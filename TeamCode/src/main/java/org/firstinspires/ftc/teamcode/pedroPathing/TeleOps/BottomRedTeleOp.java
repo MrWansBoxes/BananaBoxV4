@@ -1,8 +1,6 @@
 package org.firstinspires.ftc.teamcode.pedroPathing.TeleOps;
 
 
-import static android.os.SystemClock.sleep;
-
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
@@ -23,9 +21,9 @@ import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
-import org.firstinspires.ftc.teamcode.pedroPathing.colorSensors.ColorSensorBottom;
-import org.firstinspires.ftc.teamcode.pedroPathing.colorSensors.ColorSensorMiddle;
-import org.firstinspires.ftc.teamcode.pedroPathing.colorSensors.ColorSensorTop;
+import org.firstinspires.ftc.teamcode.pedroPathing.Subsystems.ColorSensorBottom;
+import org.firstinspires.ftc.teamcode.pedroPathing.Subsystems.ColorSensorMiddle;
+import org.firstinspires.ftc.teamcode.pedroPathing.Subsystems.ColorSensorTop;
 
 import java.util.function.Supplier;
 
@@ -52,30 +50,10 @@ public class BottomRedTeleOp extends OpMode {
     private DcMotor intake;
     private DcMotorEx launcher1, launcher2;  // DcMotors
 
-    int intakeflag = 0;   // these are the flags
-    int launchflag = 0;
-    int parkflag = 0;
-    int limeflag = 0;
-
     public double highVelocity = 2400;
     public double lowVelocity = 1700;
     double curTargetVelocity = highVelocity;
 
-    private double launcherPowerFar1 = 0.88;
-    private double launcherPowerFar2 = -0.88;
-    private int launcherOff = 0;
-    private double launcherPowerClose1 = 0.68;
-    private double launcherPowerClose2 = -0.68;
-    private int intakeOn = 1;
-    private int intakeOff = 0;
-    private int intakeReverse = -1;
-    private double flickUp = 0.86;
-    private double flickDown = 0.5;
-    private double lightGreen = 0.5;
-    private double lightPurple = 0.722;
-    private int lightOff = 0;
-    private int liftUp = 1;
-    private int liftDown = 0;
 
     double endGameStart;
     boolean isEndGame = false;
@@ -234,11 +212,10 @@ public class BottomRedTeleOp extends OpMode {
         telemetryM.debug("velocity", follower.getVelocity());
         telemetryM.debug("automatedDrive", automatedDrive);
 
-/*
+
         LLResult result = limelight.getLatestResult();
 
         if (result != null && result.isValid()) {
-            if (limeflag == 1) {
                 // Error is just tx straight from Limelight
                 double error = result.getTx();
 
@@ -255,13 +232,12 @@ public class BottomRedTeleOp extends OpMode {
 
                 telemetry.addData("tx", error);
                 telemetry.addData("power", power);
-            }
         } else {
             // No target -> stop motor
             turret.setPower(0);
             telemetry.addLine("No Target");
         }
-*/
+
         telemetry.update();
 
 

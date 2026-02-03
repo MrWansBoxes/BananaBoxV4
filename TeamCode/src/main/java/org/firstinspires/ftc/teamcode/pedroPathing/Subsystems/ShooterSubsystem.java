@@ -1,157 +1,131 @@
 package org.firstinspires.ftc.teamcode.pedroPathing.Subsystems;
 
 import com.bylazar.configurables.annotations.Configurable;
-import com.pedropathing.math.*;
-import com.qualcomm.robotcore.hardware.HardwareMap;
-import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.Servo;
-
+import com.pedropathing.geometry.Pose;
+import com.pedropathing.math.Vector;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.hardware.limelightvision.LLResult;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.hardware.Servo;
 
-import com.pedropathing.geometry.*;
-import com.pedropathing.VectorCalculator.*;
 @Configurable
 public class ShooterSubsystem {
 
-    // ===== HARDWARE =====
-    private final DcMotorEx flywheel;
+    private final DcMotorEx flywheel1;
+    private final DcMotorEx flywheel2;
     private final DcMotorEx turret;
     private final Servo hood;
     private final Limelight3A limelight;
 
-    // ===== TURRET PID =====
-    public static double turretKp = 0.05;
+
+    // Turret PID
+    public static double turretKp = 0.04;
     public static double turretKi = 0.0;
-    public static double turretKd = 0.001;
-    private double lastTurretError = 0.0;
-    private double turretIntegral = 0.0;
-    private double turretTargetRad = 0.0;
+    public static double turretKd = 0.002;
 
-    // ===== CONSTANTS =====
-    private static final double TICKS_PER_REV = 8192.0; // REV encoder
-    private static final double TICKS_TO_RAD = 2 * Math.PI / TICKS_PER_REV;
-
-    private static final double MAX_LEAD_RAD = Math.toRadians(5);
-
-    // Hood control constants
-    public static double A = 24.0;
-    public static double B = 6.0;
-    public static double kRPM = 0.001;
-    private static final double MAX_HOOD = 25.0;
-
-    // Flywheel constants
-    public static double C = -900.0;
+    // Distance to RPM (from ta)
+    public static double C = -850.0;
     public static double D = 5200.0;
 
-    // ===== STATE =====
-    private double filteredRPM = 0.0;
-    private double filteredTa = 0.0;
+    // Distance to the hood
+    public static double A = 22.0;
+    public static double B = 6.0;
+
+    // Motion compensation (RPM only)
+    public static double RPM_PER_MPS = 320.0;
+
+    // RPM limits
+    public static double MIN_RPM = 4200.0;
+    public static double MAX_RPM = 5800.0;
+
+    private double turretIntegral = 0;
+    private double lastError = 0;
+
+    private double filteredTa = 0;
+    private static final double TA_ALPHA = 0.15;
+
+    private static final double TICKS_TO_RAD = 2.0 * Math.PI / 8192.0;
 
     public ShooterSubsystem(HardwareMap hw) {
-        flywheel = hw.get(DcMotorEx.class, "flywheel");
-        turret = hw.get(DcMotorEx.class, "turret");
-        hood = hw.get(Servo.class, "hood");
-        limelight = hw.get(Limelight3A.class, "limelight");
 
-        flywheel.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
-        turret.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
+        flywheel1  = hw.get(DcMotorEx.class, "flywheel1");
+        flywheel2 = hw.get(DcMotorEx.class, "flywheel2");
+        turret        = hw.get(DcMotorEx.class, "turret");
+        hood          = hw.get(Servo.class, "hood");
+        limelight     = hw.get(Limelight3A.class, "limelight");
+
+        flywheel1.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
+        flywheel2.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
+
+        flywheel2.setDirection(DcMotorEx.Direction.REVERSE);
     }
 
-    /**
-     * Call this each loop
-     * @param robotPose current robot Pose (from PedroPathing follower)
-     * @param robotVel current robot velocity Vector (from PedroPathing follower)
-     * @param dt loop delta time in seconds
-     */
-    public void update(Pose robotPose, Vector robotVel, double dt) {
+
+    public void update(Pose pose, Vector velocity, double dt) {
 
         LLResult result = limelight.getLatestResult();
         if (result == null || !result.isValid()) return;
 
-        double tx = result.getTx();   // horizontal angle offset to target
-        double ta = result.getTa();   // target area
+        // filter for distance
+        filteredTa = TA_ALPHA * result.getTa()
+                + (1 - TA_ALPHA) * filteredTa;
 
-        // Low-pass filter target area
-        filteredTa = 0.8 * filteredTa + 0.2 * ta;
+        // turret tracking
 
-        // Estimate distance
-        double distance = taToDistance(filteredTa);
+        double txRad = Math.toRadians(result.getTx());
 
-        // Flywheel velocity
-        double actualRPM = ticksToRPM(flywheel.getVelocity());
-        filteredRPM = 0.7 * filteredRPM + 0.3 * actualRPM;
+        turretIntegral += txRad * dt;
+        double derivative = (txRad - lastError) / dt;
 
-        double targetRPM = C * Math.sqrt(filteredTa) + D;
-        flywheel.setVelocity(rpmToTicks(targetRPM));
+        double output =
+                turretKp * txRad +
+                        turretKi * turretIntegral +
+                        turretKd * derivative;
 
-        // Hood servo
-        double hoodAngle = A / Math.sqrt(filteredTa) + B + kRPM * (targetRPM - filteredRPM);
+        turret.setPower(output);
+        lastError = txRad;
+
+       // robot motion
+
+        double turretAngle =
+                turret.getCurrentPosition() * TICKS_TO_RAD;
+
+        double vForward =
+                velocity.getXComponent() * Math.cos(turretAngle)
+                        + velocity.getYComponent() * Math.sin(turretAngle);
+
+        // flywheel RPM
+
+        double targetRPM =
+                C * Math.sqrt(filteredTa) + D;
+
+        // Backward compensation only
+        targetRPM += (-vForward) * RPM_PER_MPS;
+
+        targetRPM = clamp(targetRPM, MIN_RPM, MAX_RPM);
+
+        flywheel1.setVelocity(targetRPM);
+        flywheel2.setVelocity(targetRPM);
+
+        // hood angle
+
+        double hoodAngle =
+                A * Math.sqrt(filteredTa) + B;
+
         hood.setPosition(angleToServo(hoodAngle));
-
-        // Motion compensation
-        double turretAngle = turret.getCurrentPosition() * TICKS_TO_RAD;
-        double vLat = -robotVel.getXComponent() * Math.sin(turretAngle)
-                + robotVel.getYComponent() * Math.cos(turretAngle);
-
-
-        double exitVelocity = rpmToExitVelocity(targetRPM);
-        double flightTime = distance / exitVelocity;
-        double lateralDisplacement = vLat * flightTime;
-
-        double leadAngle = Math.atan(lateralDisplacement / distance);
-        leadAngle = clamp(leadAngle, -MAX_LEAD_RAD, MAX_LEAD_RAD);
-
-        // Turret target = vision offset + motion lead
-        turretTargetRad = Math.toRadians(tx) + leadAngle;
-
-        runTurretPID(dt);
     }
 
-    // ===== MANUAL PID LOOP =====
-    private void runTurretPID(double dt) {
-        double currentRad = turret.getCurrentPosition() * TICKS_TO_RAD;
-        double error = turretTargetRad - currentRad;
 
-        turretIntegral += error * dt;
-        double derivative = (error - lastTurretError) / dt;
-
-        double output = turretKp * error + turretKi * turretIntegral + turretKd * derivative;
-        turret.setPower(clamp(output, -0.7, 0.7));
-
-        lastTurretError = error;
-    }
-
-    // ===== HELPERS =====
-    private double taToDistance(double ta) {
-        return 1.0 / Math.sqrt(ta); // empirical scaling — tune in testing
-    }
-
-    private double ticksToRPM(double ticksPerSec) {
-        return ticksPerSec * 60.0 / TICKS_PER_REV;
-    }
-
-    private double rpmToTicks(double rpm) {
-        return rpm * TICKS_PER_REV / 60.0;
-    }
-
-    private double rpmToExitVelocity(double rpm) {
-        return rpm * 0.002; // empirical constant — tune with practice
-    }
-
-    private double angleToServo(double angle) {
-        return clamp(angle / MAX_HOOD, 0.0, 1.0);
+    private double angleToServo(double angleRad) {
+        return clamp(angleRad / Math.toRadians(45), 0, 1);
     }
 
     private double clamp(double v, double min, double max) {
         return Math.max(min, Math.min(max, v));
     }
+
     public Limelight3A getLimelight() {
         return limelight;
     }
-
-    // ===== TELEMETRY GETTERS =====
-    public double getFilteredRPM() { return filteredRPM; }
-    public double getHoodAngle() { return A / Math.sqrt(filteredTa) + B; }
-    public double getTurretTarget() { return turretTargetRad; }
 }

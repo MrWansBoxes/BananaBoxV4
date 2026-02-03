@@ -1,329 +1,230 @@
 package org.firstinspires.ftc.teamcode.pedroPathing.Autos;
-
-import static android.os.SystemClock.sleep;
-
-import com.pedropathing.follower.Follower;
+import com.qualcomm.robotcore.eventloop.opmode.OpMode;
+import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.bylazar.configurables.annotations.Configurable;
+import com.bylazar.telemetry.TelemetryManager;
+import com.bylazar.telemetry.PanelsTelemetry;
+import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import com.pedropathing.geometry.BezierCurve;
 import com.pedropathing.geometry.BezierLine;
-import com.pedropathing.geometry.Pose;
+import com.pedropathing.follower.Follower;
 import com.pedropathing.paths.PathChain;
-import com.pedropathing.util.Timer;
+import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Servo;
 
-public class AutoTopBlue {
+import org.firstinspires.ftc.teamcode.pedroPathing.Subsystems.ColorSensorBottom;
+import org.firstinspires.ftc.teamcode.pedroPathing.Subsystems.ColorSensorMiddle;
+import org.firstinspires.ftc.teamcode.pedroPathing.Subsystems.ColorSensorTop;
+import org.firstinspires.ftc.teamcode.pedroPathing.Subsystems.ShooterSubsystem;
 
-    private final Follower follower;
+@Autonomous
+@Configurable // Panels
+public class AutoTopBlue extends OpMode {
 
-    private final Servo flip1;
-    private final DcMotor intake;
-    private final DcMotor launcher1;
-    private final DcMotor launcher2;
+    ColorSensorBottom bottom = new ColorSensorBottom();   // gets the color sensor class
+    ColorSensorMiddle middle = new ColorSensorMiddle();
+    ColorSensorTop top = new ColorSensorTop();
+    ColorSensorBottom.DetectedColor detectedColorBottom;
+    ColorSensorMiddle.DetectedColor detectedColorMiddle;
+    ColorSensorTop.DetectedColor detectedColorTop;
+    private DcMotor intake;
+    private Servo gate;  // servos
+    private TelemetryManager panelsTelemetry; // Panels Telemetry instance
+    public Follower follower; // Pedro Pathing follower instance
+    private int pathState; // Current autonomous path state (state machine)
+    private Paths paths; // Paths defined in the Paths class
+    private ShooterSubsystem shooter;
+    private double lastTime = 0.0;
+    private boolean shooterActive = false;
 
-    private int pathState;
-    private final Timer pathTimer;
+    @Override
+    public void init() {
+        panelsTelemetry = PanelsTelemetry.INSTANCE.getTelemetry();
 
-    private Paths paths;
+        follower = Constants.createFollower(hardwareMap);
+        follower.setStartingPose(new Pose(14.939759036144583, 113.83132530120483, Math.toRadians(180)));
 
-
-    private final double launcherPowerFar1 = 0.85;  // Variables for tuning
-    private final double launcherPowerFar2 = -0.85;
-    private final double launcherPowerClose1 = 0.68;
-    private final double launcherPowerClose2 = -0.68;
-    private final int launcherOff = 0;
-    private final int intakeOn = 1;
-    private final int intakeOff = 0;
-    private final double flickUp = 0.86;
-    private final double flickDown = 0.5;
-
-    public AutoTopBlue(Follower follower, Servo flip1, DcMotor intake, DcMotor launcher1, DcMotor launcher2) {
-
-        this.follower = follower;
-        this.flip1 = flip1;
-        this.intake = intake;
-        this.launcher1 = launcher1;
-        this.launcher2 = launcher2;
-
-        pathTimer = new Timer();
+        paths = new Paths(follower); // Build paths
+// Shooter subsystem
+        shooter = new ShooterSubsystem(hardwareMap);
+        panelsTelemetry.debug("Status", "Initialized");
+        panelsTelemetry.update(telemetry);
     }
-
+    @Override
     public void start() {
-        follower.setStartingPose(new Pose(32.31416549789621, 135.51753155680223, Math.toRadians(90))); // starting spot
-        paths = new Paths(follower);
-        setPathState(0);
+        lastTime = getRuntime();
+        shooter.getLimelight().start();
+        shooter.getLimelight().pipelineSwitch(1); // 1 is for blue tracking
+    }
+    @Override
+    public void loop() {
+        follower.update(); // Update Pedro Pathing
+        pathState = autonomousPathUpdate(); // Update autonomous state machine
+
+        // launcher update
+        if (shooterActive) {
+            double currentTime = getRuntime();
+            double dt = currentTime - lastTime;
+            lastTime = currentTime;
+
+            shooter.update(follower.getPose(), follower.getVelocity(), dt);
+        }
+
+        // Log values to Panels and Driver Station
+        panelsTelemetry.debug("Path State", pathState);
+        panelsTelemetry.debug("X", follower.getPose().getX());
+        panelsTelemetry.debug("Y", follower.getPose().getY());
+        panelsTelemetry.debug("Heading", follower.getPose().getHeading());
+        panelsTelemetry.update(telemetry);
     }
 
-    public void update() {
-        follower.update();
-        autonomousPathUpdate();
-    }
-
-    private void launch3balls() {  // we call this function every time you want to launch 3 balls
-        sleep(200);
-        flip1.setPosition(flickUp);
-        sleep(200);
-        flip1.setPosition(flickDown);
-        sleep(700);
-        intake.setPower(intakeOn);
-        sleep(1000);
-        flip1.setPosition(flickUp);
-        sleep(200);
-        flip1.setPosition(flickDown);
-        sleep(800);
-        flip1.setPosition(flickUp);
-        sleep(200);
-        flip1.setPosition(flickDown);
-        sleep(600);
-        launcher1.setPower(launcherOff);
-        launcher2.setPower(launcherOff);
-        intake.setPower(intakeOff);
-    }
 
     public static class Paths {
-
-        public PathChain Shoot1,GotoBallPile1, IntakeBallPile1,
-                Shoot2, GotoBallPile2, IntakeBallPile2,
-                Shoot3, GotoBallPile3, IntakeBallPile3,
-                Shoot4, GoPark;
+        public PathChain Starttoshoot1;
+        public PathChain ShootPretopickup1;
+        public PathChain Pickup1toshoot2;
+        public PathChain Shoot2tograbfromgate;
+        public PathChain Gate1toshoot3;
+        public PathChain Shoot3togate2;
+        public PathChain Gate2toshoot4;
+        public PathChain Shoot4topickup2;
+        public PathChain Pickup2toshoot5;
+        public PathChain Shoot5topickup3;
+        public PathChain Pickup3toshoot6;
+        public PathChain Shoot6topark;
 
         public Paths(Follower follower) {
-            Shoot1 = follower
-                    .pathBuilder()
-                    .addPath(
+            Starttoshoot1 = follower.pathBuilder().addPath(
                             new BezierCurve(
-                                    new Pose(32.314, 135.518),
-                                    new Pose(33.930, 101.588),
-                                    new Pose(59.781, 83.613)
+                                    new Pose(14.940, 113.831),
+                                    new Pose(32.048, 94.759),
+                                    new Pose(54.072, 92.096)
                             )
-                    )
-                    .setLinearHeadingInterpolation(Math.toRadians(90), Math.toRadians(132))
+                    ).setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(180))
+
                     .build();
 
-            GotoBallPile1 = follower
-                    .pathBuilder()
-                    .addPath(
-                            new BezierLine(new Pose(59.781, 83.613), new Pose(39.987, 83.962))
-                    )
-                    .setLinearHeadingInterpolation(Math.toRadians(132), Math.toRadians(180))
-                    .build();
-
-            IntakeBallPile1 = follower
-                    .pathBuilder()
-                    .addPath(
-                            new BezierLine(new Pose(39.987, 83.962), new Pose(14.339, 84.219))
-                    )
-                    .setTangentHeadingInterpolation()
-                    .build();
-
-            Shoot2 = follower
-                    .pathBuilder()
-                    .addPath(
+            ShootPretopickup1 = follower.pathBuilder().addPath(
                             new BezierCurve(
-                                    new Pose(14.339, 84.219),
-                                    new Pose(36.757, 73.919),
-                                    new Pose(59.781, 83.613)
+                                    new Pose(54.072, 92.096),
+                                    new Pose(67.114, 55.488),
+                                    new Pose(9.614, 59.590)
                             )
-                    )
-                    .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(132))
+                    ).setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(180))
+
                     .build();
 
-            GotoBallPile2 = follower
-                    .pathBuilder()
-                    .addPath(
+            Pickup1toshoot2 = follower.pathBuilder().addPath(
                             new BezierCurve(
-                                    new Pose(59.781, 83.613),
-                                    new Pose(60.387, 61.195),
-                                    new Pose(39.787, 59.781)
+                                    new Pose(9.614, 59.590),
+                                    new Pose(26.898, 51.102),
+                                    new Pose(45.898, 88.898),
+                                    new Pose(54.108, 92.060)
                             )
-                    )
-                    .setLinearHeadingInterpolation(Math.toRadians(132), Math.toRadians(180))
+                    ).setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(140))
+
                     .build();
 
-            IntakeBallPile2 = follower
-                    .pathBuilder()
-                    .addPath(
-                            new BezierLine(new Pose(39.787, 59.781), new Pose(8.281, 59.781))
-                    )
-                    .setTangentHeadingInterpolation()
-                    .build();
-
-            Shoot3 = follower
-                    .pathBuilder()
-                    .addPath(
+            Shoot2tograbfromgate = follower.pathBuilder().addPath(
                             new BezierCurve(
-                                    new Pose(8.281, 59.781),
-                                    new Pose(62.609, 52.309),
-                                    new Pose(59.781, 83.613)
+                                    new Pose(54.108, 92.060),
+                                    new Pose(30.458, 58.994),
+                                    new Pose(12.157, 59.518)
                             )
-                    )
-                    .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(132))
+                    ).setLinearHeadingInterpolation(Math.toRadians(140), Math.toRadians(145))
+
                     .build();
 
-            GotoBallPile3 = follower
-                    .pathBuilder()
-                    .addPath(
+            Gate1toshoot3 = follower.pathBuilder().addPath(
                             new BezierCurve(
-                                    new Pose(59.781, 83.613),
-                                    new Pose(60.589, 34.334),
-                                    new Pose(39.383, 35.748)
+                                    new Pose(12.157, 59.518),
+                                    new Pose(34.886, 64.301),
+                                    new Pose(54.193, 92.169)
                             )
-                    )
-                    .setLinearHeadingInterpolation(Math.toRadians(132), Math.toRadians(180))
+                    ).setLinearHeadingInterpolation(Math.toRadians(145), Math.toRadians(140))
+
                     .build();
 
-            IntakeBallPile3 = follower
-                    .pathBuilder()
-                    .addPath(
-                            new BezierLine(new Pose(39.383, 35.748), new Pose(8.281, 35.546))
-                    )
-                    .setTangentHeadingInterpolation()
-                    .build();
-
-            Shoot4 = follower
-                    .pathBuilder()
-                    .addPath(
+            Shoot3togate2 = follower.pathBuilder().addPath(
                             new BezierCurve(
-                                    new Pose(8.281, 35.546),
-                                    new Pose(13.935, 21.206),
-                                    new Pose(61.397, 21.408)
+                                    new Pose(54.193, 92.169),
+                                    new Pose(37.184, 65.440),
+                                    new Pose(12.223, 59.602)
                             )
-                    )
-                    .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(117))
+                    ).setLinearHeadingInterpolation(Math.toRadians(140), Math.toRadians(145))
+
                     .build();
 
-            GoPark = follower
-                    .pathBuilder()
-                    .addPath(
+            Gate2toshoot4 = follower.pathBuilder().addPath(
                             new BezierCurve(
-                                    new Pose(61.397, 21.408),
-                                    new Pose(55.136, 6.665),
-                                    new Pose(35.546, 9.492)
+                                    new Pose(12.223, 59.602),
+                                    new Pose(40.425, 64.627),
+                                    new Pose(54.048, 92.012)
                             )
-                    )
-                    .setLinearHeadingInterpolation(Math.toRadians(117), Math.toRadians(180))
+                    ).setLinearHeadingInterpolation(Math.toRadians(145), Math.toRadians(180))
+
+                    .build();
+
+            Shoot4topickup2 = follower.pathBuilder().addPath(
+                            new BezierCurve(
+                                    new Pose(54.048, 92.012),
+                                    new Pose(59.602, 82.681),
+                                    new Pose(16.747, 83.831)
+                            )
+                    ).setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(180))
+
+                    .build();
+
+            Pickup2toshoot5 = follower.pathBuilder().addPath(
+                            new BezierCurve(
+                                    new Pose(16.747, 83.831),
+                                    new Pose(38.416, 86.247),
+                                    new Pose(54.229, 92.229)
+                            )
+                    ).setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(180))
+
+                    .build();
+
+            Shoot5topickup3 = follower.pathBuilder().addPath(
+                            new BezierCurve(
+                                    new Pose(54.229, 92.229),
+                                    new Pose(83.922, 30.880),
+                                    new Pose(9.928, 35.988)
+                            )
+                    ).setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(180))
+
+                    .build();
+
+            Pickup3toshoot6 = follower.pathBuilder().addPath(
+                            new BezierCurve(
+                                    new Pose(9.928, 35.988),
+                                    new Pose(48.223, 60.819),
+                                    new Pose(54.422, 91.892)
+                            )
+                    ).setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(140))
+
+                    .build();
+
+            Shoot6topark = follower.pathBuilder().addPath(
+                            new BezierCurve(
+                                    new Pose(54.422, 91.892),
+                                    new Pose(33.934, 93.614),
+                                    new Pose(18.169, 104.687)
+                            )
+                    ).setLinearHeadingInterpolation(Math.toRadians(140), Math.toRadians(90))
+
                     .build();
         }
     }
+
+
     public int autonomousPathUpdate() {
         switch (pathState) {
-            case 0:
-
-                launcher1.setPower(launcherPowerClose1);
-                launcher2.setPower(launcherPowerClose2);      // start launcher motors
-                follower.followPath(paths.Shoot1);
-                setPathState(1);
-
-                break;
-            case 1:
-
-
-                if (pathTimer.getElapsedTimeSeconds() > 4) {
-                    intake.setPower(intakeOn);
-                    follower.followPath(paths.GotoBallPile1,true);
-                    setPathState(2);
-                }
-
-
-                if(!follower.isBusy()) {
-                    launch3balls();
-                }
-                break;
-            case 2:
-                if(!follower.isBusy()) {
-
-                    follower.followPath(paths.IntakeBallPile1,true);
-                    setPathState(3);
-                    sleep(300);
-                    intake.setPower(intakeOff);
-                    launcher1.setPower(launcherPowerClose1);
-                    launcher2.setPower(launcherPowerClose2);      // start launcher motors
-                }
-                break;
-            case 3:
-                if(!follower.isBusy()) {
-
-                    follower.followPath(paths.Shoot2,true);
-                    setPathState(4);
-                }
-                break;
-            case 4:
-                if (pathTimer.getElapsedTimeSeconds() > 4) {
-                    intake.setPower(intakeOn);
-                    follower.followPath(paths.GotoBallPile2,true);
-                    setPathState(6);
-                }
-                if (!follower.isBusy()) {
-                    launch3balls();
-                }
-                break;
-            case 6:
-                if(!follower.isBusy()) {
-
-                    follower.followPath(paths.IntakeBallPile2,true);
-                    setPathState(7);
-                    sleep(300);
-                    intake.setPower(intakeOff);
-                    launcher1.setPower(launcherPowerClose1);
-                    launcher2.setPower(launcherPowerClose2);      // start launcher motors for close side
-                }
-                break;
-            case 7:
-                if(!follower.isBusy()) {
-
-                    follower.followPath(paths.Shoot2,true);
-                    setPathState(8);
-                }
-                break;
-            case 8:
-
-                if (pathTimer.getElapsedTimeSeconds() > 4) {
-                    intake.setPower(intakeOn);
-                    follower.followPath(paths.GotoBallPile3, true);
-                    setPathState(9);
-                }
-                if(!follower.isBusy()) {
-                    launch3balls();
-                }
-                break;
-
-            case 9:
-                if(!follower.isBusy()) {
-
-                    follower.followPath(paths.IntakeBallPile3, true);
-                    setPathState(10);
-                    sleep(300);
-                    intake.setPower(intakeOff);
-                    launcher1.setPower(launcherPowerFar1);
-                    launcher2.setPower(launcherPowerFar2);
-                }
-                break;
-            case 10:
-                if(!follower.isBusy()) {
-
-                    follower.followPath(paths.Shoot4,true);
-                    setPathState(4);
-                }
-                break;
-            case 11:
-
-                if (pathTimer.getElapsedTimeSeconds() > 4) {
-                    follower.followPath(paths.GoPark, true);
-                    setPathState(-1);
-                }
-
-                if(!follower.isBusy()) {
-
-                    launch3balls();
-
-                }
-                break;
-
-
+            // Add your state machine Here
+            // Access paths with paths.pathName
+            // Refer to the Pedro Pathing Docs (Auto Example) for an example state machine
         }
         return pathState;
-    }
-    public void setPathState(int pState) {
-        pathState = pState;
-        pathTimer.resetTimer();
     }
 }

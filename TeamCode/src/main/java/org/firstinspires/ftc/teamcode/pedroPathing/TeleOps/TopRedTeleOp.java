@@ -1,35 +1,36 @@
 package org.firstinspires.ftc.teamcode.pedroPathing.TeleOps;
 
-
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
 import com.pedropathing.follower.Follower;
-import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
+import com.pedropathing.geometry.*;
+import com.pedropathing.math.*;
+import com.pedropathing.paths.*;
 import com.pedropathing.paths.HeadingInterpolator;
 import com.pedropathing.paths.Path;
 import com.pedropathing.paths.PathChain;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.hardware.limelightvision.Limelight3A;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
-import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.hardware.Servo;
+
 
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.pedroPathing.Subsystems.ColorSensorBottom;
 import org.firstinspires.ftc.teamcode.pedroPathing.Subsystems.ColorSensorMiddle;
 import org.firstinspires.ftc.teamcode.pedroPathing.Subsystems.ColorSensorTop;
+import org.firstinspires.ftc.teamcode.pedroPathing.Subsystems.ShooterSubsystem;
 
 import java.util.function.Supplier;
 
-
-@TeleOp
 @Configurable
+@TeleOp
 public class TopRedTeleOp extends OpMode {
+
+    int intakeFlag = 0;
+    int gateFlag = 0;
 
     ColorSensorBottom bottom = new ColorSensorBottom();   // gets the color sensor class
     ColorSensorMiddle middle = new ColorSensorMiddle();
@@ -37,132 +38,68 @@ public class TopRedTeleOp extends OpMode {
     ColorSensorBottom.DetectedColor detectedColorBottom;
     ColorSensorMiddle.DetectedColor detectedColorMiddle;
     ColorSensorTop.DetectedColor detectedColorTop;
+    private DcMotor intake;
+    private Servo liftleft, liftright, gate;  // servos
     private Follower follower;
-    public static Pose startingPose;    //See ExampleAuto to understand how to use this
+    public static Pose startingPose;
     private boolean automatedDrive;
     private Supplier<PathChain> pathChain;
+
     private TelemetryManager telemetryM;
-    private boolean slowMode = false;
-    private double slowModeMultiplier = 0.5;  // we don't use this
-
-    private Servo gate, liftleft, liftright, hood;  // servos
-    private DcMotor intake;
-    private DcMotorEx launcher1, launcher2;  // DcMotors
-
-    int intakeflag = 0;   // these are the flags
-    int launchflag = 0;
-    int parkflag = 0;
-    int limeflag = 0;
-
-    public double highVelocity = 2400;
-    public double lowVelocity = 1700;
-    double curTargetVelocity = highVelocity;
-
-    private double launcherPowerFar1 = 0.88;
-    private double launcherPowerFar2 = -0.88;
-    private int launcherOff = 0;
-    private double launcherPowerClose1 = 0.68;
-    private double launcherPowerClose2 = -0.68;
-    private int intakeOn = 1;
-    private int intakeOff = 0;
-    private int intakeReverse = -1;
-    private double flickUp = 0.86;
-    private double flickDown = 0.5;
-    private double lightGreen = 0.5;
-    private double lightPurple = 0.722;
-    private int lightOff = 0;
-    private int liftUp = 1;
-    private int liftDown = 0;
-
-    double endGameStart;
-    boolean isEndGame = false;
-    double trackTimer;
 
 
-    private DcMotorEx turret;    // turret
-    private Limelight3A limelight;  // limelight
+    private ShooterSubsystem shooter;
 
-    // --- PID constants ---
-    public static double P = 0.02;    // these are the PID controls for the turret and limelight
-    public static double I = 0.0;
-    public static double D = 0.0;
+    private double lastTime = 0.0;
+    private boolean shooterActive = false;
 
-    static double F = 12.8;
-    static double P2 = 30;
-
-    private double integral = 0;
-    private double lastError = 0;
 
     @Override
     public void init() {
-
-        bottom.init(hardwareMap);
-        middle.init(hardwareMap);
-        top.init(hardwareMap);
-
         follower = Constants.createFollower(hardwareMap);
-        follower.setStartingPose(startingPose == null ? new Pose(72,72,90) : startingPose);   // set where the robot starts in TeleOp
+        follower.setStartingPose(startingPose == null ? new Pose(72,72,90) : startingPose);
         follower.update();
 
         telemetryM = PanelsTelemetry.INSTANCE.getTelemetry();
-        pathChain = () -> follower.pathBuilder() //Lazy Curve Generation
-                .addPath(new Path(new BezierLine(follower::getPose, new Pose(45, 98))))
+        intake = hardwareMap.get(DcMotor.class, "intake");
+        liftleft = hardwareMap.get(Servo.class, "liftleft");
+        liftright = hardwareMap.get(Servo.class, "liftright");
+        gate = hardwareMap.get(Servo.class, "gate");
+
+        // Shooter subsystem
+        shooter = new ShooterSubsystem(hardwareMap);
+
+        // Example path (optional)
+        pathChain = () -> follower.pathBuilder()
+                .addPath(new Path(new BezierCurve(follower::getPose, new Pose(45, 98))))
                 .setHeadingInterpolation(HeadingInterpolator.linearFromPoint(follower::getHeading, Math.toRadians(45), 0.8))
                 .build();
-
-
         telemetry.addLine("Initialized");
-
-        launcher1 = hardwareMap.get(DcMotorEx.class,"launcher1");
-        launcher2 = hardwareMap.get(DcMotorEx.class,"launcher2");
-        liftleft = hardwareMap.get(Servo.class,"liftleft");
-        liftright = hardwareMap.get(Servo.class,"liftright");
-        gate = hardwareMap.get(Servo.class,"gate");
-        hood = hardwareMap.get(Servo.class,"hood");
-        intake = hardwareMap.get(DcMotor.class,"intake");
-
-        launcher1.setDirection(DcMotorSimple.Direction.FORWARD);
-        launcher2.setDirection(DcMotorSimple.Direction.REVERSE);
-        PIDFCoefficients pidfCoefficients = new PIDFCoefficients(P2,0,0,F);
-        launcher1.setPIDFCoefficients(DcMotorEx.RunMode.RUN_USING_ENCODER, pidfCoefficients);
-        launcher2.setPIDFCoefficients(DcMotorEx.RunMode.RUN_USING_ENCODER, pidfCoefficients);
-
     }
 
     @Override
     public void start() {
-        //  limelight.start();   // starts the limelight
-        follower.startTeleopDrive();  // starts the driving
-        //  limelight.pipelineSwitch();  // pipeline 1 is for blue tracking
-        endGameStart = getRuntime() + 103;
-        trackTimer = getRuntime() + 15;
+        follower.startTeleopDrive();
+        lastTime = getRuntime();
+        shooter.getLimelight().start();
+        shooter.getLimelight().pipelineSwitch(0); // 0 is for red tracking
+
     }
 
     @Override
     public void loop() {
 
+        follower.update();
+        telemetryM.update();
 
-        double curVelocity = launcher1.getVelocity();
-        double error2 = curTargetVelocity - curVelocity;
+        // TeleOp driving
+        if (!automatedDrive) {
+            double driveY = -gamepad1.left_stick_y;
+            double driveX = -gamepad1.left_stick_x;
+            double turn  = -gamepad1.right_stick_x;
 
-        telemetry.addData("Target Velocity", curTargetVelocity);
-        telemetry.addData("Current Velocity", "%.2f", curVelocity);
-        telemetry.addData("Error", "%.2f", error2);
 
-        PIDFCoefficients pidfCoefficients = new PIDFCoefficients(P2,0,0,F);
-        launcher1.setPIDFCoefficients(DcMotorEx.RunMode.RUN_USING_ENCODER, pidfCoefficients);
-        launcher2.setPIDFCoefficients(DcMotorEx.RunMode.RUN_USING_ENCODER, pidfCoefficients);
-
-        telemetry.addData("Y", follower.getPose().getY());
-        if (trackTimer <= getRuntime()) {
-            gamepad2.rumbleBlips(1);
-            trackTimer = getRuntime() + 15;
-        }
-        telemetry.addData("Runtime", getRuntime());
-        if (endGameStart <= getRuntime() && !isEndGame) {
-            gamepad1.rumble(5000);
-            gamepad2.rumble(5000);
-            isEndGame = true;
+            follower.setTeleOpDrive(driveY, driveX, turn, true); // robot-centric
         }
 
         detectedColorTop = top.getDetectedColor(telemetry);
@@ -176,91 +113,72 @@ public class TopRedTeleOp extends OpMode {
         detectedColorBottom = bottom.getDetectedColor(telemetry);
         telemetry.addData("Detected Color Bottom", detectedColorBottom);
 
-        // flip1.setPosition(flickDown);
-        // if (detectedColorBottom == ColorSensorBottom.DetectedColor.GREEN){
-        //     light.setPosition(lightGreen);
+        // if (detectedColorBottom == ColorSensorBottom.DetectedColor.GREEN)
 
+        // launcher update
+        if (shooterActive) {
+            double currentTime = getRuntime();
+            double dt = currentTime - lastTime;
+            lastTime = currentTime;
 
-
-        follower.update();
-        telemetryM.update();
-        if (!automatedDrive) {
-            //Make the last parameter false for field-centric
-            //In case the drivers want to use a "slowMode" you can scale the vectors
-            //This is the normal version to use in the TeleOp
-            if (!slowMode) follower.setTeleOpDrive(
-                    -gamepad1.left_stick_y,
-                    -gamepad1.left_stick_x,
-                    -gamepad1.right_stick_x,
-                    true // Robot Centric
-            );
-                //This is how it looks with slowMode on
-            else follower.setTeleOpDrive(
-                    -gamepad1.left_stick_y * slowModeMultiplier,
-                    -gamepad1.left_stick_x * slowModeMultiplier,
-                    -gamepad1.right_stick_x * slowModeMultiplier,
-                    true // Robot Centric
-            );
+            shooter.update(follower.getPose(), follower.getVelocity(), dt);
         }
-        //Automated PathFollowing
-        //  if (gamepad1.aWasPressed()) {
-        //       follower.followPath(pathChain.get());
-        //      automatedDrive = true;
-        //  }
-        //Stop automated following if the follower is done
-        //     if (automatedDrive && (gamepad1.bWasPressed() || !follower.isBusy())) {
-        //       follower.startTeleopDrive();
-        //       automatedDrive = false;
-        //  }
-        //Slow Mode
 
 
-        //Optional way to change slow mode strength
-        //      if (gamepad1.xWasPressed()) {
-        //         slowModeMultiplier += 0.25;
-        //     }
-        //Optional way to change slow mode strength
-        //     if (gamepad2.yWasPressed()) {
-        //         slowModeMultiplier -= 0.25;
-        //     }
-
-
-
-
-        telemetryM.debug("position", follower.getPose());
-        telemetryM.debug("velocity", follower.getVelocity());
-        telemetryM.debug("automatedDrive", automatedDrive);
-
-/*
-        LLResult result = limelight.getLatestResult();
-
-        if (result != null && result.isValid()) {
-            if (limeflag == 1) {
-                // Error is just tx straight from Limelight
-                double error = result.getTx();
-
-                // Basic PID
-                integral += error;
-                double derivative = error - lastError;
-
-                double power = P * error + I * integral + D * derivative;
-
-
-                turret.setPower(power);
-
-                lastError = error;
-
-                telemetry.addData("tx", error);
-                telemetry.addData("power", power);
-            }
-        } else {
-            // No target -> stop motor
-            turret.setPower(0);
-            telemetry.addLine("No Target");
-        }
-*/
+        //  telemetry.addData("Flywheel RPM", shooter.getFlywheelRPM());
+        //  telemetry.addData("Hood Angle", shooter.getHoodAngle());
+        //  telemetry.addData("Turret Target (deg)", Math.toDegrees(shooter.getTurretTarget()));
+        telemetry.addData("Automated Drive", automatedDrive);
         telemetry.update();
 
+
+        if (gamepad1.dpadLeftWasPressed()) {
+            follower.followPath(pathChain.get());
+            automatedDrive = true;
+        }
+        if (automatedDrive && (gamepad1.dpadRightWasPressed() || !follower.isBusy())) {
+            follower.startTeleopDrive();
+            automatedDrive = false;
+        }
+
+
+        if (gamepad1.xWasPressed()) {         // tracking active
+            shooterActive = !shooterActive;
+            lastTime = getRuntime();
+        }
+
+        if (gamepad1.aWasPressed()) {   // intake in
+            if (intakeFlag == 0) {
+                intake.setPower(1);
+                intakeFlag = 1;
+            }
+            else if (intakeFlag == 1){
+                intake.setPower(0);
+                intakeFlag = 0;
+            }
+        }
+
+        if (gamepad1.bWasPressed()) {   // intake out
+            if (intakeFlag == 0) {
+                intake.setPower(-1);
+                intakeFlag = -1;
+            }
+            else if (intakeFlag == -1){
+                intake.setPower(0);
+                intakeFlag = 0;
+            }
+        }
+
+        if (gamepad1.yWasPressed()) {   // gate open
+            if (gateFlag == 0) {
+                gate.setPosition(0.5);
+                gateFlag = 1;
+            }
+            else if (gateFlag == 1) {
+                gate.setPosition(0.0);
+                gateFlag = 0;
+            }
+        }
 
     }
 }

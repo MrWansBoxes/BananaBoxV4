@@ -140,7 +140,11 @@ public void start() {
         }
     }
 
-
+    /* You could check for
+                - Follower State: "if(!follower.isBusy()) {}"
+                - Time: "if(pathTimer.getElapsedTimeSeconds() > 1) {}"
+                - Robot Position: "if(follower.getPose().getX() > 36) {}"
+                */
     public int autonomousPathUpdate() {
         switch (pathState) {
             // Add your state machine Here

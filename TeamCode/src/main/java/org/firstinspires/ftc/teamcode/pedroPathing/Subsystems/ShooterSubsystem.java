@@ -18,11 +18,11 @@ public class ShooterSubsystem {
     private final Servo hood;
     private final Limelight3A limelight;
 
-
-    // Turret PID
+    // Turret PIDF
     public static double turretKp = 0.04;
     public static double turretKi = 0.0;
     public static double turretKd = 0.002;
+    public static double turretKf = 0.07;
 
     // Distance to RPM (from ta)
     public static double C = -850.0;
@@ -39,6 +39,9 @@ public class ShooterSubsystem {
     public static double MIN_RPM = 4200.0;
     public static double MAX_RPM = 5800.0;
 
+    // RPM rate limit
+    public static double MAX_RPM_CHANGE = 150.0; // max RPM change per loop
+
     private double turretIntegral = 0;
     private double lastError = 0;
 
@@ -47,20 +50,22 @@ public class ShooterSubsystem {
 
     private static final double TICKS_TO_RAD = 2.0 * Math.PI / 8192.0;
 
+    // Track current RPM for rate limiting
+    private double currentRPM = 0;
+
     public ShooterSubsystem(HardwareMap hw) {
 
-        flywheel1  = hw.get(DcMotorEx.class, "flywheel1");
+        flywheel1 = hw.get(DcMotorEx.class, "flywheel1");
         flywheel2 = hw.get(DcMotorEx.class, "flywheel2");
-        turret        = hw.get(DcMotorEx.class, "turret");
-        hood          = hw.get(Servo.class, "hood");
-        limelight     = hw.get(Limelight3A.class, "limelight");
+        turret = hw.get(DcMotorEx.class, "turret");
+        hood = hw.get(Servo.class, "hood");
+        limelight = hw.get(Limelight3A.class, "limelight");
 
         flywheel1.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
         flywheel2.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
 
         flywheel2.setDirection(DcMotorEx.Direction.REVERSE);
     }
-
 
     public void update(Pose pose, Vector velocity, double dt) {
 
@@ -72,7 +77,6 @@ public class ShooterSubsystem {
                 + (1 - TA_ALPHA) * filteredTa;
 
         // turret tracking
-
         double txRad = Math.toRadians(result.getTx());
 
         turretIntegral += txRad * dt;
@@ -81,13 +85,13 @@ public class ShooterSubsystem {
         double output =
                 turretKp * txRad +
                         turretKi * turretIntegral +
-                        turretKd * derivative;
+                        turretKd * derivative +
+                        turretKf * Math.signum(txRad);
 
         turret.setPower(output);
         lastError = txRad;
 
-       // robot motion
-
+        // robot motion
         double turretAngle =
                 turret.getCurrentPosition() * TICKS_TO_RAD;
 
@@ -96,7 +100,6 @@ public class ShooterSubsystem {
                         + velocity.getYComponent() * Math.sin(turretAngle);
 
         // flywheel RPM
-
         double targetRPM =
                 C * Math.sqrt(filteredTa) + D;
 
@@ -105,17 +108,21 @@ public class ShooterSubsystem {
 
         targetRPM = clamp(targetRPM, MIN_RPM, MAX_RPM);
 
-        flywheel1.setVelocity(targetRPM);
-        flywheel2.setVelocity(targetRPM);
+        // RATE LIMITING
+        double rpmDiff = targetRPM - currentRPM;
+        if (rpmDiff > MAX_RPM_CHANGE) rpmDiff = MAX_RPM_CHANGE;
+        if (rpmDiff < -MAX_RPM_CHANGE) rpmDiff = -MAX_RPM_CHANGE;
+        currentRPM += rpmDiff;
+
+        flywheel1.setVelocity(currentRPM);
+        flywheel2.setVelocity(currentRPM);
 
         // hood angle
-
         double hoodAngle =
                 A * Math.sqrt(filteredTa) + B;
 
         hood.setPosition(angleToServo(hoodAngle));
     }
-
 
     private double angleToServo(double angleRad) {
         return clamp(angleRad / Math.toRadians(45), 0, 1);

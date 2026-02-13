@@ -1,4 +1,5 @@
 package org.firstinspires.ftc.teamcode.pedroPathing.Autos;
+import com.pedropathing.util.Timer;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.bylazar.configurables.annotations.Configurable;
@@ -37,6 +38,13 @@ public class AutoBottomBlue extends OpMode {
     private ShooterSubsystem shooter;
     private double lastTime = 0.0;
     private boolean shooterActive = false;
+    private int launchState3 = 0;
+    private int launchState2 = 0;
+    private int launchState1 = 0;
+    private Timer pathTimer;
+    private Timer launchTimer;
+
+
 
     @Override
     public void init() {
@@ -79,6 +87,30 @@ public class AutoBottomBlue extends OpMode {
         panelsTelemetry.update(telemetry);
     }
 
+    private void launch3balls() {  // we call this function every time you want to launch 3 balls
+        switch (launchState3) {
+            case 0:
+                gate.setPosition(0.5);  //0.5 open 0.3 closed I think
+                launchTimer.resetTimer();
+                break;
+
+            case 1:
+                if (launchTimer.getElapsedTimeSeconds() > 0.5) {
+                    intake.setPower(1);
+                    launchTimer.resetTimer();
+                }
+                break;
+
+        }
+    }
+    private void launch2balls() {  // we call this function every time you want to launch 2 balls
+
+    }
+
+    private void launch1ball() {  // we call this function every time you want to launch 1 ball
+
+
+    }
 
     public static class Paths {
         public PathChain Starttoshoot1;
@@ -147,10 +179,55 @@ public class AutoBottomBlue extends OpMode {
                 */
     public int autonomousPathUpdate() {
         switch (pathState) {
-            // Add your state machine Here
-            // Access paths with paths.pathName
-            // Refer to the Pedro Pathing Docs (Auto Example) for an example state machine
+            case 0:
+
+                shooterActive = !shooterActive;
+
+                follower.followPath(paths.Starttoshoot1,true);
+                    setPathState(1);
+                    break;
+
+            case 1:
+
+                if (!follower.isBusy()) {
+                    follower.followPath(paths.Shoot1topickup1, true);
+                    setPathState(2);
+                    break;
+                }
+
+
+            case 2:
+
+                if (!follower.isBusy()) {
+                    follower.followPath(paths.Pickup1tointake1, true);
+                    setPathState(3);
+                    break;
+                }
+
+            case 3:
+
+                if (!follower.isBusy()) {
+                    follower.followPath(paths.Intake1toshoot2, true);
+                    setPathState(4);
+                    break;
+                }
+
+            case 4:
+
+                if (!follower.isBusy()) {
+                    follower.followPath(paths.Shoot2topark, true);
+                    setPathState(5);
+                    break;
+                }
+
+                
+
+
         }
         return pathState;
+    }
+    public void setPathState(int pState) {
+        pathState = pState;
+        pathTimer.resetTimer();
     }
 }

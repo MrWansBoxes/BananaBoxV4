@@ -11,8 +11,7 @@ public class ColorSensorBottom {
     NormalizedColorSensor colorSensorBottom;
 
     public enum DetectedColor{
-        PURPLE,
-        GREEN,
+        SOMETHING,
         UNKNOWN
     }
 
@@ -29,9 +28,9 @@ public class ColorSensorBottom {
         normGreen = colors.green / colors.alpha;
         normBlue = colors.blue / colors.alpha;
 
-//telemetry.addData("red", normRed);
-//telemetry.addData("green", normGreen);
-//telemetry.addData("blue", normBlue);
+telemetry.addData("red", normRed);
+telemetry.addData("green", normGreen);
+telemetry.addData("blue", normBlue);
 
 /*
 
@@ -41,13 +40,9 @@ Green =<0.05, >0.09, <0.1
 Purple =>0.04, <0.09, >0.08
 
  */
-        if (normRed < 0.05 && normGreen > 0.09 && normBlue < 0.1){  // norm RGB values for the green artifact
-            return DetectedColor.GREEN;
+        if (normRed < 0.14 || normRed > 0.153){  // norm RGB values for the green artifact
+            return DetectedColor.SOMETHING;
         }
-        else if (normRed > 0.04 && normGreen < 0.09 && normBlue > 0.08) {  // norm RGB values for the green artifact
-            return DetectedColor.PURPLE;
-        }
-
         else {
             return DetectedColor.UNKNOWN;
         }

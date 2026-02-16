@@ -32,12 +32,12 @@ public class TopBlueTeleOp extends OpMode {
     int intakeFlag = 0;
     int gateFlag = 0;
 
-   // ColorSensorBottom bottom = new ColorSensorBottom();   // gets the color sensor class
-  //  ColorSensorMiddle middle = new ColorSensorMiddle();
-  //  ColorSensorTop top = new ColorSensorTop();
-   // ColorSensorBottom.DetectedColor detectedColorBottom;
-   // ColorSensorMiddle.DetectedColor detectedColorMiddle;
-   // ColorSensorTop.DetectedColor detectedColorTop;
+    ColorSensorBottom bottom = new ColorSensorBottom();   // gets the color sensor class
+    ColorSensorMiddle middle = new ColorSensorMiddle();
+    ColorSensorTop top = new ColorSensorTop();
+    ColorSensorBottom.DetectedColor detectedColorBottom;
+    ColorSensorMiddle.DetectedColor detectedColorMiddle;
+    ColorSensorTop.DetectedColor detectedColorTop;
     private DcMotor intake;
     private Servo /*liftleft, liftright,*/ gate;  // servos
     private Follower follower;
@@ -48,12 +48,9 @@ public class TopBlueTeleOp extends OpMode {
     private Supplier<PathChain> pathChain;
 
     private TelemetryManager telemetryM;
-
-
-  //  private ShooterSubsystem shooter;
-
+    private ShooterSubsystem shooter;
     private double lastTime = 0.0;
-    private boolean shooterActive = false;
+
 
 
     @Override
@@ -61,15 +58,17 @@ public class TopBlueTeleOp extends OpMode {
         follower = Constants.createFollower(hardwareMap);
         follower.setStartingPose(startingPose == null ? new Pose(72,72,90) : startingPose);
         follower.update();
-
+        top.init(hardwareMap);
+        middle.init(hardwareMap);
+        bottom.init(hardwareMap);
         telemetryM = PanelsTelemetry.INSTANCE.getTelemetry();
         intake = hardwareMap.get(DcMotor.class, "intake");
-       // liftleft = hardwareMap.get(Servo.class, "liftleft");
-     //   liftright = hardwareMap.get(Servo.class, "liftright");
+        // liftleft = hardwareMap.get(Servo.class, "liftleft");
+        //   liftright = hardwareMap.get(Servo.class, "liftright");
         gate = hardwareMap.get(Servo.class, "gate");
 
         // Shooter subsystem
-      //  shooter = new ShooterSubsystem(hardwareMap);
+        shooter = new ShooterSubsystem(hardwareMap);
 
         // Example path (optional)
         pathChain = () -> follower.pathBuilder()
@@ -78,15 +77,15 @@ public class TopBlueTeleOp extends OpMode {
                 .build();
         telemetry.addLine("Initialized");
 
-        gate.setPosition(0.5);
+        gate.setPosition(0.55);
     }
 
     @Override
     public void start() {
         follower.startTeleopDrive();
         lastTime = getRuntime();
-    //    shooter.getLimelight().start();
-    //    shooter.getLimelight().pipelineSwitch(1); // 1 is for blue tracking
+        shooter.getLimelight().start();
+        shooter.getLimelight().pipelineSwitch(1); // 1 is for blue tracking
 
     }
 
@@ -117,34 +116,27 @@ public class TopBlueTeleOp extends OpMode {
         }
 
 
-        //  detectedColorTop = top.getDetectedColor(telemetry);
-      //  telemetry.addData("Detected Color Top", detectedColorTop);
+        detectedColorTop = top.getDetectedColor(telemetry);
+        telemetry.addData("Detected Color Top", detectedColorTop);
 
 
-      //  detectedColorMiddle = middle.getDetectedColor(telemetry);
-       // telemetry.addData("Detected Color Middle", detectedColorMiddle);
+        detectedColorMiddle = middle.getDetectedColor(telemetry);
+        telemetry.addData("Detected Color Middle", detectedColorMiddle);
 
 
-      //  detectedColorBottom = bottom.getDetectedColor(telemetry);
-      //  telemetry.addData("Detected Color Bottom", detectedColorBottom);
+        detectedColorBottom = bottom.getDetectedColor(telemetry);
+        telemetry.addData("Detected Color Bottom", detectedColorBottom);
 
         // if (detectedColorBottom == ColorSensorBottom.DetectedColor.GREEN)
 
         // launcher update
-        if (shooterActive) {
             double currentTime = getRuntime();
             double dt = currentTime - lastTime;
             lastTime = currentTime;
 
-        //    shooter.update(follower.getPose(), follower.getVelocity(), dt);
-        }
+            shooter.update(follower.getPose(), follower.getVelocity(), dt);
 
 
-        //  telemetry.addData("Flywheel RPM", shooter.getFlywheelRPM());
-        //  telemetry.addData("Hood Angle", shooter.getHoodAngle());
-        //  telemetry.addData("Turret Target (deg)", Math.toDegrees(shooter.getTurretTarget()));
-        telemetry.addData("Automated Drive", automatedDrive);
-        telemetry.update();
 
 
         if (gamepad1.dpadLeftWasPressed()) {
@@ -154,12 +146,6 @@ public class TopBlueTeleOp extends OpMode {
         if (automatedDrive && (gamepad1.dpadRightWasPressed() || !follower.isBusy())) {
             follower.startTeleopDrive();
             automatedDrive = false;
-        }
-
-
-        if (gamepad1.xWasPressed()) {         // tracking active
-            shooterActive = !shooterActive;
-            lastTime = getRuntime();
         }
 
         if (gamepad1.aWasPressed()) {   // intake in

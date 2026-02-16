@@ -1,7 +1,7 @@
 {
   "startPoint": {
-    "x": 129.06024096385542,
-    "y": 113.83132530120483,
+    "x": 130.02409638554218,
+    "y": 112.86746987951807,
     "heading": "linear",
     "startDeg": 90,
     "endDeg": 0,
@@ -15,7 +15,7 @@
         "x": 89.92771084337349,
         "y": 92.09638554216866,
         "heading": "linear",
-        "startDeg": 0,
+        "startDeg": 90,
         "endDeg": 0
       },
       "controlPoints": [
@@ -128,60 +128,14 @@
       "waitAfterName": ""
     },
     {
-      "id": "ml1qe0f1-xyn6s7",
-      "endPoint": {
-        "x": 131.77710843373495,
-        "y": 59.60240963855422,
-        "heading": "linear",
-        "reverse": false,
-        "startDeg": 40,
-        "endDeg": 35
-      },
-      "controlPoints": [
-        {
-          "x": 106.81626506024098,
-          "y": 65.43975903614458
-        }
-      ],
-      "color": "#9C967B",
-      "name": "Shoot3 to gate2",
-      "waitBeforeMs": 0,
-      "waitAfterMs": 0,
-      "waitBeforeName": "",
-      "waitAfterName": ""
-    },
-    {
-      "id": "ml1qh61c-if8ig1",
-      "name": "Gate2 to shoot4",
-      "endPoint": {
-        "x": 89.95180722891565,
-        "y": 92.01204819277108,
-        "heading": "linear",
-        "reverse": false,
-        "startDeg": 35,
-        "endDeg": 0
-      },
-      "controlPoints": [
-        {
-          "x": 103.57530120481928,
-          "y": 64.62650602409639
-        }
-      ],
-      "color": "#AD6D9C",
-      "waitBeforeMs": 0,
-      "waitAfterMs": 0,
-      "waitBeforeName": "",
-      "waitAfterName": ""
-    },
-    {
       "id": "ml1qj29u-fbrluh",
-      "name": "Shoot4 to pickup2",
+      "name": "Shoot3 to pickup2",
       "endPoint": {
         "x": 127.25301204819277,
         "y": 83.8313253012048,
         "heading": "linear",
         "reverse": false,
-        "startDeg": 0,
+        "startDeg": 40,
         "endDeg": 0
       },
       "controlPoints": [
@@ -198,7 +152,7 @@
     },
     {
       "id": "ml1qmquy-jt35je",
-      "name": "Pickup2 to shoot5",
+      "name": "Pickup2 to shoot4",
       "endPoint": {
         "x": 89.7710843373494,
         "y": 92.2289156626506,
@@ -221,7 +175,7 @@
     },
     {
       "id": "ml1qogt1-u07ti4",
-      "name": "Shoot5 to pickup3",
+      "name": "Shoot4 to pickup3",
       "endPoint": {
         "x": 134.0722891566265,
         "y": 35.98795180722892,
@@ -244,7 +198,7 @@
     },
     {
       "id": "ml1qpp08-18s13a",
-      "name": "Pickup3 to shoot6",
+      "name": "Pickup3 to shoot5",
       "endPoint": {
         "x": 89.57831325301206,
         "y": 91.89156626506025,
@@ -267,10 +221,10 @@
     },
     {
       "id": "ml1qqi9y-fpzyo3",
-      "name": "Shoot6 to park",
+      "name": "Shoot5 to park",
       "endPoint": {
-        "x": 125.83132530120483,
-        "y": 104.6867469879518,
+        "x": 83.42168674698797,
+        "y": 103.53012048192772,
         "heading": "linear",
         "reverse": false,
         "startDeg": 40,
@@ -278,8 +232,8 @@
       },
       "controlPoints": [
         {
-          "x": 110.06626506024097,
-          "y": 93.61445783132532
+          "x": 88.86144578313252,
+          "y": 98.2409638554217
         }
       ],
       "color": "#7C696A",
@@ -370,14 +324,6 @@
     },
     {
       "kind": "path",
-      "lineId": "ml1qe0f1-xyn6s7"
-    },
-    {
-      "kind": "path",
-      "lineId": "ml1qh61c-if8ig1"
-    },
-    {
-      "kind": "path",
       "lineId": "ml1qj29u-fbrluh"
     },
     {
@@ -397,26 +343,6 @@
       "lineId": "ml1qqi9y-fpzyo3"
     }
   ],
-  "settings": {
-    "xVelocity": 75,
-    "yVelocity": 65,
-    "aVelocity": 3.141592653589793,
-    "kFriction": 0.5,
-    "rWidth": 18,
-    "rHeight": 14,
-    "safetyMargin": 1,
-    "maxVelocity": 70,
-    "maxAcceleration": 30,
-    "maxDeceleration": 30,
-    "fieldMap": "decode.webp",
-    "robotImage": "/robot.png",
-    "theme": "auto",
-    "showGhostPaths": false,
-    "showOnionLayers": false,
-    "onionLayerSpacing": 4,
-    "onionColor": "#17d3a4",
-    "onionNextPointOnly": false
-  },
   "version": "1.2.1",
-  "timestamp": "2026-01-31T21:13:42.637Z"
+  "timestamp": "2026-02-14T16:19:32.149Z"
 }

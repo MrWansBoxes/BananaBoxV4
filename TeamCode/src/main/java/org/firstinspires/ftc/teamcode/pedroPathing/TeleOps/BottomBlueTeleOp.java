@@ -39,19 +39,17 @@ public class BottomBlueTeleOp extends OpMode {
     ColorSensorMiddle.DetectedColor detectedColorMiddle;
     ColorSensorTop.DetectedColor detectedColorTop;
     private DcMotor intake;
-    private Servo liftleft, liftright, gate;  // servos
+    private Servo /*liftleft, liftright,*/ gate;  // servos
     private Follower follower;
     public static Pose startingPose;
     private boolean automatedDrive;
+    private boolean slowMode = false;
+    private double slowModeMultiplier = 0.5;
     private Supplier<PathChain> pathChain;
 
     private TelemetryManager telemetryM;
-
-
     private ShooterSubsystem shooter;
-
     private double lastTime = 0.0;
-    private boolean shooterActive = false;
 
 
     @Override
@@ -59,11 +57,13 @@ public class BottomBlueTeleOp extends OpMode {
         follower = Constants.createFollower(hardwareMap);
         follower.setStartingPose(startingPose == null ? new Pose(72,72,90) : startingPose);
         follower.update();
-
+        top.init(hardwareMap);
+        middle.init(hardwareMap);
+        bottom.init(hardwareMap);
         telemetryM = PanelsTelemetry.INSTANCE.getTelemetry();
         intake = hardwareMap.get(DcMotor.class, "intake");
-        liftleft = hardwareMap.get(Servo.class, "liftleft");
-        liftright = hardwareMap.get(Servo.class, "liftright");
+        // liftleft = hardwareMap.get(Servo.class, "liftleft");
+        //   liftright = hardwareMap.get(Servo.class, "liftright");
         gate = hardwareMap.get(Servo.class, "gate");
 
         // Shooter subsystem
@@ -75,6 +75,8 @@ public class BottomBlueTeleOp extends OpMode {
                 .setHeadingInterpolation(HeadingInterpolator.linearFromPoint(follower::getHeading, Math.toRadians(45), 0.8))
                 .build();
         telemetry.addLine("Initialized");
+
+        gate.setPosition(0.55);
     }
 
     @Override
@@ -94,13 +96,24 @@ public class BottomBlueTeleOp extends OpMode {
 
         // TeleOp driving
         if (!automatedDrive) {
-            double driveY = -gamepad1.left_stick_y;
-            double driveX = -gamepad1.left_stick_x;
-            double turn  = -gamepad1.right_stick_x;
-
-
-            follower.setTeleOpDrive(driveY, driveX, turn, true); // robot-centric
+            //Make the last parameter false for field-centric
+            //In case the drivers want to use a "slowMode" you can scale the vectors
+            //This is the normal version to use in the TeleOp
+            if (!slowMode) follower.setTeleOpDrive(
+                    -gamepad1.left_stick_y,
+                    -gamepad1.left_stick_x,
+                    -gamepad1.right_stick_x,
+                    true // Robot Centric
+            );
+                //This is how it looks with slowMode on
+            else follower.setTeleOpDrive(
+                    -gamepad1.left_stick_y * slowModeMultiplier,
+                    -gamepad1.left_stick_x * slowModeMultiplier,
+                    -gamepad1.right_stick_x * slowModeMultiplier,
+                    true // Robot Centric
+            );
         }
+
 
         detectedColorTop = top.getDetectedColor(telemetry);
         telemetry.addData("Detected Color Top", detectedColorTop);
@@ -116,20 +129,12 @@ public class BottomBlueTeleOp extends OpMode {
         // if (detectedColorBottom == ColorSensorBottom.DetectedColor.GREEN)
 
         // launcher update
-        if (shooterActive) {
             double currentTime = getRuntime();
             double dt = currentTime - lastTime;
             lastTime = currentTime;
 
             shooter.update(follower.getPose(), follower.getVelocity(), dt);
-        }
 
-
-      //  telemetry.addData("Flywheel RPM", shooter.getFlywheelRPM());
-      //  telemetry.addData("Hood Angle", shooter.getHoodAngle());
-      //  telemetry.addData("Turret Target (deg)", Math.toDegrees(shooter.getTurretTarget()));
-        telemetry.addData("Automated Drive", automatedDrive);
-        telemetry.update();
 
 
         if (gamepad1.dpadLeftWasPressed()) {
@@ -141,11 +146,6 @@ public class BottomBlueTeleOp extends OpMode {
             automatedDrive = false;
         }
 
-
-        if (gamepad1.xWasPressed()) {         // tracking active
-            shooterActive = !shooterActive;
-            lastTime = getRuntime();
-        }
 
         if (gamepad1.aWasPressed()) {   // intake in
             if (intakeFlag == 0) {
@@ -171,11 +171,11 @@ public class BottomBlueTeleOp extends OpMode {
 
         if (gamepad1.yWasPressed()) {   // gate open
             if (gateFlag == 0) {
-                gate.setPosition(0.5);
+                gate.setPosition(0.3);
                 gateFlag = 1;
             }
             else if (gateFlag == 1) {
-                gate.setPosition(0.0);
+                gate.setPosition(0.5);
                 gateFlag = 0;
             }
         }

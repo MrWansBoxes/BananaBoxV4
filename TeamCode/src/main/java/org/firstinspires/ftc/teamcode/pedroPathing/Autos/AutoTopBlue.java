@@ -1,4 +1,5 @@
 package org.firstinspires.ftc.teamcode.pedroPathing.Autos;
+import com.pedropathing.util.Timer;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.bylazar.configurables.annotations.Configurable;
@@ -35,6 +36,8 @@ public class AutoTopBlue extends OpMode {
     private int pathState; // Current autonomous path state (state machine)
     private Paths paths; // Paths defined in the Paths class
     private ShooterSubsystem shooter;
+    private Timer pathTimer;
+    private Timer shootTimer;
     private double lastTime = 0.0;
     private boolean shooterActive = false;
 
@@ -43,9 +46,16 @@ public class AutoTopBlue extends OpMode {
         panelsTelemetry = PanelsTelemetry.INSTANCE.getTelemetry();
 
         follower = Constants.createFollower(hardwareMap);
-        follower.setStartingPose(new Pose(14.939759036144583, 113.83132530120483, Math.toRadians(180)));
+        follower.setStartingPose(new Pose(13.975903614457835, 112.86746987951807, Math.toRadians(90)));
 
         paths = new Paths(follower); // Build paths
+        intake = hardwareMap.get(DcMotor.class, "intake");
+        gate = hardwareMap.get(Servo.class, "gate");
+        bottom.init(hardwareMap);
+        middle.init(hardwareMap);
+        top.init(hardwareMap);
+        pathTimer = new Timer();
+        shootTimer = new Timer();
 // Shooter subsystem
         shooter = new ShooterSubsystem(hardwareMap);
         panelsTelemetry.debug("Status", "Initialized");
@@ -76,6 +86,14 @@ public class AutoTopBlue extends OpMode {
         panelsTelemetry.debug("X", follower.getPose().getX());
         panelsTelemetry.debug("Y", follower.getPose().getY());
         panelsTelemetry.debug("Heading", follower.getPose().getHeading());
+        detectedColorTop = top.getDetectedColor(telemetry);
+        telemetry.addData("Detected Color Top", detectedColorTop);
+        detectedColorMiddle = middle.getDetectedColor(telemetry);
+        telemetry.addData("Detected Color Middle", detectedColorMiddle);
+        detectedColorBottom = bottom.getDetectedColor(telemetry);
+        telemetry.addData("Detected Color Bottom", detectedColorBottom);
+
+        telemetry.update();
         panelsTelemetry.update(telemetry);
     }
 
@@ -86,22 +104,20 @@ public class AutoTopBlue extends OpMode {
         public PathChain Pickup1toshoot2;
         public PathChain Shoot2tograbfromgate;
         public PathChain Gate1toshoot3;
-        public PathChain Shoot3togate2;
-        public PathChain Gate2toshoot4;
-        public PathChain Shoot4topickup2;
-        public PathChain Pickup2toshoot5;
-        public PathChain Shoot5topickup3;
-        public PathChain Pickup3toshoot6;
-        public PathChain Shoot6topark;
+        public PathChain Shoot3topickup2;
+        public PathChain Pickup2toshoot4;
+        public PathChain Shoot4topickup3;
+        public PathChain Pickup3toshoot5;
+        public PathChain Shoot5topark;
 
         public Paths(Follower follower) {
             Starttoshoot1 = follower.pathBuilder().addPath(
                             new BezierCurve(
-                                    new Pose(14.940, 113.831),
+                                    new Pose(13.976, 112.867),
                                     new Pose(32.048, 94.759),
                                     new Pose(54.072, 92.096)
                             )
-                    ).setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(180))
+                    ).setLinearHeadingInterpolation(Math.toRadians(90), Math.toRadians(180))
 
                     .build();
 
@@ -146,37 +162,17 @@ public class AutoTopBlue extends OpMode {
 
                     .build();
 
-            Shoot3togate2 = follower.pathBuilder().addPath(
+            Shoot3topickup2 = follower.pathBuilder().addPath(
                             new BezierCurve(
                                     new Pose(54.193, 92.169),
-                                    new Pose(37.184, 65.440),
-                                    new Pose(12.223, 59.602)
-                            )
-                    ).setLinearHeadingInterpolation(Math.toRadians(140), Math.toRadians(145))
-
-                    .build();
-
-            Gate2toshoot4 = follower.pathBuilder().addPath(
-                            new BezierCurve(
-                                    new Pose(12.223, 59.602),
-                                    new Pose(40.425, 64.627),
-                                    new Pose(54.048, 92.012)
-                            )
-                    ).setLinearHeadingInterpolation(Math.toRadians(145), Math.toRadians(180))
-
-                    .build();
-
-            Shoot4topickup2 = follower.pathBuilder().addPath(
-                            new BezierCurve(
-                                    new Pose(54.048, 92.012),
                                     new Pose(59.602, 82.681),
                                     new Pose(16.747, 83.831)
                             )
-                    ).setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(180))
+                    ).setLinearHeadingInterpolation(Math.toRadians(140), Math.toRadians(180))
 
                     .build();
 
-            Pickup2toshoot5 = follower.pathBuilder().addPath(
+            Pickup2toshoot4 = follower.pathBuilder().addPath(
                             new BezierCurve(
                                     new Pose(16.747, 83.831),
                                     new Pose(38.416, 86.247),
@@ -186,7 +182,7 @@ public class AutoTopBlue extends OpMode {
 
                     .build();
 
-            Shoot5topickup3 = follower.pathBuilder().addPath(
+            Shoot4topickup3 = follower.pathBuilder().addPath(
                             new BezierCurve(
                                     new Pose(54.229, 92.229),
                                     new Pose(83.922, 30.880),
@@ -196,7 +192,7 @@ public class AutoTopBlue extends OpMode {
 
                     .build();
 
-            Pickup3toshoot6 = follower.pathBuilder().addPath(
+            Pickup3toshoot5 = follower.pathBuilder().addPath(
                             new BezierCurve(
                                     new Pose(9.928, 35.988),
                                     new Pose(48.223, 60.819),
@@ -206,11 +202,11 @@ public class AutoTopBlue extends OpMode {
 
                     .build();
 
-            Shoot6topark = follower.pathBuilder().addPath(
+            Shoot5topark = follower.pathBuilder().addPath(
                             new BezierCurve(
                                     new Pose(54.422, 91.892),
-                                    new Pose(33.934, 93.614),
-                                    new Pose(18.169, 104.687)
+                                    new Pose(55.139, 98.241),
+                                    new Pose(60.578, 103.530)
                             )
                     ).setLinearHeadingInterpolation(Math.toRadians(140), Math.toRadians(90))
 
@@ -225,10 +221,88 @@ public class AutoTopBlue extends OpMode {
 
     public int autonomousPathUpdate() {
         switch (pathState) {
-            // Add your state machine Here
-            // Access paths with paths.pathName
-            // Refer to the Pedro Pathing Docs (Auto Example) for an example state machine
+            case 0:
+                shooterActive = true;
+                follower.followPath(paths.Starttoshoot1, true);
+                setPathState(1);
+                break;
+
+            case 1:
+
+                if (!follower.isBusy()) {
+                    follower.followPath(paths.ShootPretopickup1, true);
+                    setPathState(2);
+                }
+                break;
+
+            case 2:
+
+                if (!follower.isBusy()) {
+                    follower.followPath(paths.Pickup1toshoot2, true);
+                    setPathState(3);
+                }
+                break;
+
+            case 3:
+
+                if (!follower.isBusy()) {
+                    follower.followPath(paths.Shoot2tograbfromgate, true);
+                    setPathState(4);
+                }
+                break;
+
+            case 4:
+
+                if (!follower.isBusy()) {
+                    follower.followPath(paths.Gate1toshoot3, true);
+                    setPathState(5);
+                }
+                break;
+
+            case 5:
+
+                if (!follower.isBusy()) {
+                    follower.followPath(paths.Shoot3topickup2, true);
+                    setPathState(6);
+                }
+                break;
+
+            case 6:
+
+                if (!follower.isBusy()) {
+                    follower.followPath(paths.Pickup2toshoot4, true);
+                    setPathState(7);
+                }
+                break;
+
+            case 7:
+
+                if (!follower.isBusy()) {
+                    follower.followPath(paths.Shoot4topickup3, true);
+                    setPathState(8);
+                }
+                break;
+
+            case 8:
+
+                if (!follower.isBusy()) {
+                    follower.followPath(paths.Pickup3toshoot5, true);
+                    setPathState(9);
+                }
+                break;
+
+            case 9:
+
+                if (!follower.isBusy()) {
+                    follower.followPath(paths.Shoot5topark, true);
+                    setPathState(-1);
+                }
+                break;
         }
         return pathState;
+    }
+    public void setPathState(int pState) {
+        pathState = pState;
+        pathTimer.resetTimer();
     }
 }

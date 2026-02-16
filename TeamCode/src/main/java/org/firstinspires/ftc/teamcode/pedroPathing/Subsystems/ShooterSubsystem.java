@@ -1,10 +1,13 @@
 package org.firstinspires.ftc.teamcode.pedroPathing.Subsystems;
 
+import static org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.telemetry;
+
 import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.math.Vector;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.hardware.limelightvision.LLResult;
+import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
@@ -29,8 +32,12 @@ public class ShooterSubsystem {
     public static double D = 5200.0;
 
     // Distance to the hood
-    public static double A = 22.0;
+    public static double A = 22.0;    // these will be between 0 and 1
     public static double B = 6.0;
+
+    // Hood angle safety limits (degrees)
+    public static double HOOD_MIN_POS = 0.0;
+    public static double HOOD_MAX_POS = 0.5;
 
     // Motion compensation (RPM only)
     public static double RPM_PER_MPS = 320.0;
@@ -40,7 +47,7 @@ public class ShooterSubsystem {
     public static double MAX_RPM = 5800.0;
 
     // RPM rate limit
-    public static double MAX_RPM_CHANGE = 150.0; // max RPM change per loop
+    public static double MAX_RPM_CHANGE = 400; // max RPM change per loop
 
     private double turretIntegral = 0;
     private double lastError = 0;
@@ -64,7 +71,6 @@ public class ShooterSubsystem {
         flywheel1.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
         flywheel2.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
 
-        flywheel2.setDirection(DcMotorEx.Direction.REVERSE);
     }
 
     public void update(Pose pose, Vector velocity, double dt) {
@@ -118,21 +124,42 @@ public class ShooterSubsystem {
         flywheel2.setVelocity(currentRPM);
 
         // hood angle
-        double hoodAngle =
+        double hoodPos =
                 A * Math.sqrt(filteredTa) + B;
 
-        hood.setPosition(angleToServo(hoodAngle));
+        hoodPos = clamp(hoodPos, HOOD_MIN_POS, HOOD_MAX_POS);
+
+        hood.setPosition(hoodPos);
+
+        double tps1 = flywheel1.getVelocity();
+        double tps2 = flywheel2.getVelocity();
+
+        double rpm1 = (tps1 / 28) * 60;
+        double rpm2 = (tps2 / 28) * 60;
+
+        double avgRPM = (rpm1 + rpm2) / 2;
+
+
+
+        telemetry.addData("Flywheel RPM", avgRPM);
+        //   telemetry.addData("Turret Target (deg)", Math.toDegrees(shooter.getTurretTarget()));
+        telemetry.addData("Limelight tA", limelight.getLatestResult().getTa());
+        telemetry.update();
     }
 
-    private double angleToServo(double angleRad) {
-        return clamp(angleRad / Math.toRadians(45), 0, 1);
-    }
-
-    private double clamp(double v, double min, double max) {
+        private double clamp(double v, double min, double max) {
         return Math.max(min, Math.min(max, v));
     }
 
     public Limelight3A getLimelight() {
         return limelight;
+    }
+
+    public DcMotorEx getFlywheel1() {
+        return flywheel1;
+    }
+
+    public DcMotorEx getFlywheel2() {
+        return flywheel2;
     }
 }

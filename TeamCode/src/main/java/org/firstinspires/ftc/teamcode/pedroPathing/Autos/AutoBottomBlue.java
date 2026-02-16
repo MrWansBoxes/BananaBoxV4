@@ -43,6 +43,7 @@ public class AutoBottomBlue extends OpMode {
     private int launchState1 = 0;
     private Timer pathTimer;
     private Timer launchTimer;
+    private boolean isDone;
 
 
 
@@ -51,9 +52,17 @@ public class AutoBottomBlue extends OpMode {
         panelsTelemetry = PanelsTelemetry.INSTANCE.getTelemetry();
 
         follower = Constants.createFollower(hardwareMap);
-        follower.setStartingPose(new Pose(55.08788598574822, 9.254156769596198, Math.toRadians(90)));
+        follower.setStartingPose(new Pose(55.087885985748215, 9.254156769596198, Math.toRadians(90)));
 
         paths = new Paths(follower); // Build paths
+        pathTimer = new Timer();
+        launchTimer = new Timer();
+        intake = hardwareMap.get(DcMotor.class, "intake");
+        gate = hardwareMap.get(Servo.class, "gate");
+        gate.setPosition(0.3);
+        top.init(hardwareMap);
+        middle.init(hardwareMap);
+        bottom.init(hardwareMap);
 // Shooter subsystem
         shooter = new ShooterSubsystem(hardwareMap);
         panelsTelemetry.debug("Status", "Initialized");
@@ -84,32 +93,70 @@ public class AutoBottomBlue extends OpMode {
         panelsTelemetry.debug("X", follower.getPose().getX());
         panelsTelemetry.debug("Y", follower.getPose().getY());
         panelsTelemetry.debug("Heading", follower.getPose().getHeading());
+        detectedColorTop = top.getDetectedColor(telemetry);
+        telemetry.addData("Detected Color Top", detectedColorTop);
+        detectedColorMiddle = middle.getDetectedColor(telemetry);
+        telemetry.addData("Detected Color Middle", detectedColorMiddle);
+        detectedColorBottom = bottom.getDetectedColor(telemetry);
+        telemetry.addData("Detected Color Bottom", detectedColorBottom);
+
+        telemetry.update();
         panelsTelemetry.update(telemetry);
     }
 
     private void launch3balls() {  // we call this function every time you want to launch 3 balls
         switch (launchState3) {
             case 0:
-                gate.setPosition(0.5);  //0.5 open 0.3 closed I think
+                gate.setPosition(0.55);  //0.55 open 0.3 closed I think
                 launchTimer.resetTimer();
+                launchState3++;
                 break;
 
             case 1:
-                if (launchTimer.getElapsedTimeSeconds() > 0.5) {
+                if (launchTimer.getElapsedTimeSeconds() > 0.1) {
                     intake.setPower(1);
+                    isDone = true;
                     launchTimer.resetTimer();
                 }
                 break;
-
         }
     }
     private void launch2balls() {  // we call this function every time you want to launch 2 balls
+        switch (launchState2) {
+            case 0:
+                gate.setPosition(0.55);  //0.55 open 0.3 closed I think
+                launchTimer.resetTimer();
+                launchState2++;
+                break;
 
+            case 1:
+                intake.setPower(-0.2);
+                if (launchTimer.getElapsedTimeSeconds() > 0.2) {
+                    intake.setPower(1);
+                    isDone = true;
+                    launchTimer.resetTimer();
+                }
+                break;
+        }
     }
 
     private void launch1ball() {  // we call this function every time you want to launch 1 ball
+        switch (launchState1) {
+            case 0:
+                gate.setPosition(0.55);  //0.55 open 0.3 closed I think
+                launchTimer.resetTimer();
+                launchState1++;
+                break;
 
-
+            case 1:
+                intake.setPower(-0.2);
+                if (launchTimer.getElapsedTimeSeconds() > 0.3) {
+                    intake.setPower(1);
+                    isDone = true;
+                    launchTimer.resetTimer();
+                }
+                break;
+        }
     }
 
     public static class Paths {
@@ -134,29 +181,29 @@ public class AutoBottomBlue extends OpMode {
                             new BezierCurve(
                                     new Pose(61.017, 23.914),
                                     new Pose(30.785, 8.586),
-                                    new Pose(7.466, 26.530)
+                                    new Pose(15.562, 8.216)
                             )
-                    ).setLinearHeadingInterpolation(Math.toRadians(90), Math.toRadians(270))
+                    ).setLinearHeadingInterpolation(Math.toRadians(90), Math.toRadians(-180))
 
                     .build();
 
             Pickup1tointake1 = follower.pathBuilder().addPath(
                             new BezierLine(
-                                    new Pose(7.466, 26.530),
+                                    new Pose(15.562, 8.216),
 
-                                    new Pose(7.629, 9.627)
+                                    new Pose(9.786, 8.164)
                             )
-                    ).setLinearHeadingInterpolation(Math.toRadians(270), Math.toRadians(270))
+                    ).setTangentHeadingInterpolation()
 
                     .build();
 
             Intake1toshoot2 = follower.pathBuilder().addPath(
                             new BezierCurve(
-                                    new Pose(7.629, 9.627),
+                                    new Pose(9.786, 8.164),
                                     new Pose(33.806, 21.343),
                                     new Pose(61.071, 23.919)
                             )
-                    ).setLinearHeadingInterpolation(Math.toRadians(270), Math.toRadians(90))
+                    ).setLinearHeadingInterpolation(Math.toRadians(-180), Math.toRadians(90))
 
                     .build();
 
@@ -166,7 +213,7 @@ public class AutoBottomBlue extends OpMode {
                                     new Pose(48.837, 13.333),
                                     new Pose(35.340, 11.164)
                             )
-                    ).setLinearHeadingInterpolation(Math.toRadians(90), Math.toRadians(90))
+                    ).setLinearHeadingInterpolation(Math.toRadians(90), Math.toRadians(-180))
 
                     .build();
         }
@@ -189,39 +236,73 @@ public class AutoBottomBlue extends OpMode {
 
             case 1:
 
-                if (!follower.isBusy()) {
-                    follower.followPath(paths.Shoot1topickup1, true);
-                    setPathState(2);
-                    break;
+                if (!follower.isBusy() && detectedColorBottom == ColorSensorBottom.DetectedColor.SOMETHING) {
+                    launch3balls();
+                }
+                else if (!follower.isBusy() && detectedColorMiddle == ColorSensorMiddle.DetectedColor.SOMETHING) {
+                    launch2balls();
+                }
+                else if (!follower.isBusy() && detectedColorTop == ColorSensorTop.DetectedColor.SOMETHING) {
+                    launch1ball();
+                }
+                else {
+                    isDone = true;
                 }
 
+                if (isDone) {
+                    isDone = false;
+                    launchState3 = 0;
+                    launchState2 = 0;
+                    launchState1 = 0;
+                    gate.setPosition(0.3);
+                    follower.followPath(paths.Shoot1topickup1, true);
+                    setPathState(2);
+
+                }
+                break;
 
             case 2:
 
                 if (!follower.isBusy()) {
-                    follower.followPath(paths.Pickup1tointake1, true);
+                    follower.followPath(paths.Pickup1tointake1, 0.7,true);
                     setPathState(3);
-                    break;
                 }
+                break;
 
             case 3:
 
                 if (!follower.isBusy()) {
+                    intake.setPower(0);
                     follower.followPath(paths.Intake1toshoot2, true);
                     setPathState(4);
-                    break;
                 }
+                break;
 
             case 4:
 
-                if (!follower.isBusy()) {
-                    follower.followPath(paths.Shoot2topark, true);
-                    setPathState(5);
-                    break;
+                if (!follower.isBusy() && detectedColorBottom == ColorSensorBottom.DetectedColor.SOMETHING) {
+                    launch3balls();
+                }
+                else if (!follower.isBusy() && detectedColorMiddle == ColorSensorMiddle.DetectedColor.SOMETHING) {
+                    launch2balls();
+                }
+                else if (!follower.isBusy() && detectedColorTop == ColorSensorTop.DetectedColor.SOMETHING) {
+                    launch1ball();
+                }
+                else {
+                    isDone = true;
                 }
 
-                
+                if (isDone) {
+                    isDone = false;
+                    launchState3 = 0;
+                    launchState2 = 0;
+                    launchState1 = 0;
 
+                    follower.followPath(paths.Shoot2topark, true);
+                    setPathState(-1);
+                }
+                break;
 
         }
         return pathState;

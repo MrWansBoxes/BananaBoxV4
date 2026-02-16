@@ -1,18 +1,19 @@
 package org.firstinspires.ftc.teamcode.pedroPathing.Subsystems;
 
+import com.qualcomm.robotcore.eventloop.opmode.OpMode;
+import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.NormalizedColorSensor;
 import com.qualcomm.robotcore.hardware.NormalizedRGBA;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
-//@TeleOp
+
 public class ColorSensorTop {
 
     NormalizedColorSensor colorSensorTop;
 
     public enum DetectedColor{
-        PURPLE,
-        GREEN,
+        SOMETHING,
         UNKNOWN
     }
 
@@ -29,25 +30,20 @@ public class ColorSensorTop {
         normGreen = colors.green / colors.alpha;
         normBlue = colors.blue / colors.alpha;
 
-//telemetry.addData("red", normRed);
-//telemetry.addData("green", normGreen);
-//telemetry.addData("blue", normBlue);
-
+     //   telemetry.addData("red", normRed);
+     //   telemetry.addData("green", normGreen);
+        //  telemetry.addData("blue", normBlue);
 /*
 
 red, green, blue
 
-Green =<0.05, >0.09, <0.1
-Purple =>0.04, <0.09, >0.08
+Green =0.03, 0.1, 0.088
+Purple =0.048, 0.07, >0.12
 
  */
-        if (normRed < 0.05 && normGreen > 0.09 && normBlue < 0.1){  // norm RGB values for the green artifact
-            return DetectedColor.GREEN;
+        if (normRed < 0.09 && normGreen < 0.2) {  // norm RGB values for the green artifact
+            return DetectedColor.SOMETHING;
         }
-        else if (normRed > 0.04 && normGreen < 0.09 && normBlue > 0.08) {  // norm RGB values for the green artifact
-            return DetectedColor.PURPLE;
-        }
-
         else {
             return DetectedColor.UNKNOWN;
         }

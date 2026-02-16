@@ -10,18 +10,17 @@ public class ColorSensorMiddle {
 
     NormalizedColorSensor colorSensorMiddle;
 
-    public enum DetectedColor{
-        PURPLE,
-        GREEN,
+    public enum DetectedColor {
+        SOMETHING,
         UNKNOWN
     }
 
-    public void init(HardwareMap hwMap){
-        colorSensorMiddle = hwMap.get(NormalizedColorSensor.class,"middle_color");
-        colorSensorMiddle.setGain(8);
+    public void init(HardwareMap hwMap) {
+        colorSensorMiddle = hwMap.get(NormalizedColorSensor.class, "middle_color");
+        colorSensorMiddle.setGain(11);
     }
 
-    public DetectedColor getDetectedColor(Telemetry telemetry){
+    public DetectedColor getDetectedColor(Telemetry telemetry) {
         NormalizedRGBA colors = colorSensorMiddle.getNormalizedColors();
 
         float normRed, normGreen, normBlue;
@@ -29,9 +28,9 @@ public class ColorSensorMiddle {
         normGreen = colors.green / colors.alpha;
         normBlue = colors.blue / colors.alpha;
 
-//telemetry.addData("red", normRed);
-//telemetry.addData("green", normGreen);
-//telemetry.addData("blue", normBlue);
+    //    telemetry.addData("red", normRed);
+    //    telemetry.addData("green", normGreen);
+    //    telemetry.addData("blue", normBlue);
 
 /*
 
@@ -41,16 +40,10 @@ Green =<0.05, >0.09, <0.1
 Purple =>0.04, <0.09, >0.08
 
  */
-        if (normRed < 0.05 && normGreen > 0.09 && normBlue < 0.1){  // norm RGB values for the green artifact
-            return DetectedColor.GREEN;
-        }
-        else if (normRed > 0.04 && normGreen < 0.09 && normBlue > 0.08) {  // norm RGB values for the green artifact
-            return DetectedColor.PURPLE;
-        }
-
-        else {
+        if (normRed > 0.11 || normRed < 0.09) {  // norm RGB values for the green artifact
+            return DetectedColor.SOMETHING;
+        } else {
             return DetectedColor.UNKNOWN;
         }
     }
-
 }

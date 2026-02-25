@@ -28,9 +28,9 @@ public class ColorSensorBottom {
         normGreen = colors.green / colors.alpha;
         normBlue = colors.blue / colors.alpha;
 
-telemetry.addData("red", normRed);
-telemetry.addData("green", normGreen);
-telemetry.addData("blue", normBlue);
+//telemetry.addData("red", normRed);
+//telemetry.addData("green", normGreen);
+//telemetry.addData("blue", normBlue);
 
 /*
 

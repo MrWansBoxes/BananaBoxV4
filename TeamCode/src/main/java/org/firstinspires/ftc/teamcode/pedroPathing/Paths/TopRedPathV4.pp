@@ -1,7 +1,7 @@
 {
   "startPoint": {
-    "x": 130.02409638554218,
-    "y": 112.86746987951807,
+    "x": 130.21686746987953,
+    "y": 115.7590361445783,
     "heading": "linear",
     "startDeg": 90,
     "endDeg": 0,
@@ -20,8 +20,8 @@
       },
       "controlPoints": [
         {
-          "x": 111.95180722891565,
-          "y": 94.75903614457832
+          "x": 111.7590361445783,
+          "y": 100.73493975903615
         }
       ],
       "color": "#8CCCAA",
@@ -35,8 +35,8 @@
       "id": "ml15a2v4-91wq9h",
       "name": "ShootPre to pickup1",
       "endPoint": {
-        "x": 134.3855421686747,
-        "y": 59.59036144578312,
+        "x": 127.63855421686749,
+        "y": 59.397590361445765,
         "heading": "linear",
         "reverse": false,
         "startDeg": 0,
@@ -63,7 +63,7 @@
         "heading": "linear",
         "reverse": false,
         "startDeg": 0,
-        "endDeg": 40
+        "endDeg": 0
       },
       "controlPoints": [
         {
@@ -71,8 +71,8 @@
           "y": 51.102409638554185
         },
         {
-          "x": 98.1024096385542,
-          "y": 88.89759036144578
+          "x": 98.68072289156628,
+          "y": 79.644578313253
         }
       ],
       "color": "#85BC96",
@@ -82,60 +82,14 @@
       "waitAfterName": ""
     },
     {
-      "id": "ml15elta-86hpin",
-      "name": "Shoot2 to grab from gate",
-      "endPoint": {
-        "x": 131.84337349397592,
-        "y": 59.518072289156635,
-        "heading": "linear",
-        "reverse": false,
-        "startDeg": 40,
-        "endDeg": 35
-      },
-      "controlPoints": [
-        {
-          "x": 113.54216867469879,
-          "y": 58.993975903614455
-        }
-      ],
-      "color": "#976576",
-      "waitBeforeMs": 0,
-      "waitAfterMs": 0,
-      "waitBeforeName": "",
-      "waitAfterName": ""
-    },
-    {
-      "id": "ml15h3g5-19ggyy",
-      "name": "Gate1 to shoot3",
-      "endPoint": {
-        "x": 89.80722891566268,
-        "y": 92.16867469879517,
-        "heading": "linear",
-        "reverse": false,
-        "startDeg": 35,
-        "endDeg": 40
-      },
-      "controlPoints": [
-        {
-          "x": 109.11445783132532,
-          "y": 64.3012048192771
-        }
-      ],
-      "color": "#D9689A",
-      "waitBeforeMs": 0,
-      "waitAfterMs": 0,
-      "waitBeforeName": "",
-      "waitAfterName": ""
-    },
-    {
       "id": "ml1qj29u-fbrluh",
       "name": "Shoot3 to pickup2",
       "endPoint": {
-        "x": 127.25301204819277,
-        "y": 83.8313253012048,
+        "x": 121.46987951807228,
+        "y": 83.63855421686745,
         "heading": "linear",
         "reverse": false,
-        "startDeg": 40,
+        "startDeg": 0,
         "endDeg": 0
       },
       "controlPoints": [
@@ -177,8 +131,8 @@
       "id": "ml1qogt1-u07ti4",
       "name": "Shoot4 to pickup3",
       "endPoint": {
-        "x": 134.0722891566265,
-        "y": 35.98795180722892,
+        "x": 128.86746987951807,
+        "y": 35.02409638554219,
         "heading": "linear",
         "reverse": false,
         "startDeg": 0,
@@ -223,8 +177,8 @@
       "id": "ml1qqi9y-fpzyo3",
       "name": "Shoot5 to park",
       "endPoint": {
-        "x": 83.42168674698797,
-        "y": 103.53012048192772,
+        "x": 83.61445783132531,
+        "y": 104.10843373493978,
         "heading": "linear",
         "reverse": false,
         "startDeg": 40,
@@ -232,8 +186,8 @@
       },
       "controlPoints": [
         {
-          "x": 88.86144578313252,
-          "y": 98.2409638554217
+          "x": 90.59638554216868,
+          "y": 99.78313253012048
         }
       ],
       "color": "#7C696A",
@@ -316,14 +270,6 @@
     },
     {
       "kind": "path",
-      "lineId": "ml15elta-86hpin"
-    },
-    {
-      "kind": "path",
-      "lineId": "ml15h3g5-19ggyy"
-    },
-    {
-      "kind": "path",
       "lineId": "ml1qj29u-fbrluh"
     },
     {
@@ -344,5 +290,5 @@
     }
   ],
   "version": "1.2.1",
-  "timestamp": "2026-02-14T16:19:32.149Z"
+  "timestamp": "2026-02-20T12:47:38.711Z"
 }

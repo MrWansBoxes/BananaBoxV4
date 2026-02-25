@@ -1,4 +1,6 @@
 package org.firstinspires.ftc.teamcode.pedroPathing.Autos;
+import static android.os.SystemClock.sleep;
+
 import com.pedropathing.util.Timer;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
@@ -30,7 +32,7 @@ public class AutoBottomBlue extends OpMode {
     ColorSensorMiddle.DetectedColor detectedColorMiddle;
     ColorSensorTop.DetectedColor detectedColorTop;
     private DcMotor intake;
-    private Servo gate;  // servos
+    private Servo gate, flick, hold;  // servos
     private TelemetryManager panelsTelemetry; // Panels Telemetry instance
     public Follower follower; // Pedro Pathing follower instance
     private int pathState; // Current autonomous path state (state machine)
@@ -59,6 +61,8 @@ public class AutoBottomBlue extends OpMode {
         launchTimer = new Timer();
         intake = hardwareMap.get(DcMotor.class, "intake");
         gate = hardwareMap.get(Servo.class, "gate");
+        hold = hardwareMap.get(Servo.class, "hold");
+        flick = hardwareMap.get(Servo.class,"flick");
         gate.setPosition(0.3);
         top.init(hardwareMap);
         middle.init(hardwareMap);
@@ -85,7 +89,7 @@ public class AutoBottomBlue extends OpMode {
             double dt = currentTime - lastTime;
             lastTime = currentTime;
 
-            shooter.update(follower.getPose(), follower.getVelocity(), dt);
+            shooter.update(follower.getPose(), follower.getVelocity(), dt, telemetry);
         }
 
         // Log values to Panels and Driver Station
@@ -107,53 +111,27 @@ public class AutoBottomBlue extends OpMode {
     private void launch3balls() {  // we call this function every time you want to launch 3 balls
         switch (launchState3) {
             case 0:
-                gate.setPosition(0.55);  //0.55 open 0.3 closed I think
+                gate.setPosition(0.55);  //0.55 open 0.3 closed
                 launchTimer.resetTimer();
                 launchState3++;
+                hold.setPosition(0.5);
                 break;
 
             case 1:
-                if (launchTimer.getElapsedTimeSeconds() > 0.1) {
+                if (launchTimer.getElapsedTimeSeconds() > 1) {
                     intake.setPower(1);
-                    isDone = true;
                     launchTimer.resetTimer();
+                    launchState3++;
                 }
                 break;
-        }
-    }
-    private void launch2balls() {  // we call this function every time you want to launch 2 balls
-        switch (launchState2) {
-            case 0:
-                gate.setPosition(0.55);  //0.55 open 0.3 closed I think
-                launchTimer.resetTimer();
-                launchState2++;
-                break;
-
-            case 1:
-                intake.setPower(-0.2);
-                if (launchTimer.getElapsedTimeSeconds() > 0.2) {
-                    intake.setPower(1);
-                    isDone = true;
+            case 2:
+                intake.setPower(1);
+                if (launchTimer.getElapsedTimeSeconds() > 1) {
+                    flick.setPosition(0.6);  //0 is up
+                    sleep(300);
+                    flick.setPosition(1);
                     launchTimer.resetTimer();
-                }
-                break;
-        }
-    }
-
-    private void launch1ball() {  // we call this function every time you want to launch 1 ball
-        switch (launchState1) {
-            case 0:
-                gate.setPosition(0.55);  //0.55 open 0.3 closed I think
-                launchTimer.resetTimer();
-                launchState1++;
-                break;
-
-            case 1:
-                intake.setPower(-0.2);
-                if (launchTimer.getElapsedTimeSeconds() > 0.3) {
-                    intake.setPower(1);
                     isDone = true;
-                    launchTimer.resetTimer();
                 }
                 break;
         }
@@ -191,7 +169,7 @@ public class AutoBottomBlue extends OpMode {
                             new BezierLine(
                                     new Pose(15.562, 8.216),
 
-                                    new Pose(9.786, 8.164)
+                                    new Pose(11.135878430586969, 8.164224594339366)
                             )
                     ).setTangentHeadingInterpolation()
 
@@ -199,7 +177,7 @@ public class AutoBottomBlue extends OpMode {
 
             Intake1toshoot2 = follower.pathBuilder().addPath(
                             new BezierCurve(
-                                    new Pose(9.786, 8.164),
+                                    new Pose(11.135878430586969, 8.164224594339366),
                                     new Pose(33.806, 21.343),
                                     new Pose(61.071, 23.919)
                             )
@@ -231,22 +209,13 @@ public class AutoBottomBlue extends OpMode {
                 shooterActive = !shooterActive;
 
                 follower.followPath(paths.Starttoshoot1,true);
-                    setPathState(1);
-                    break;
+                setPathState(1);
+                break;
 
             case 1:
 
-                if (!follower.isBusy() && detectedColorBottom == ColorSensorBottom.DetectedColor.SOMETHING) {
+                if (pathTimer.getElapsedTimeSeconds() > 4) {
                     launch3balls();
-                }
-                else if (!follower.isBusy() && detectedColorMiddle == ColorSensorMiddle.DetectedColor.SOMETHING) {
-                    launch2balls();
-                }
-                else if (!follower.isBusy() && detectedColorTop == ColorSensorTop.DetectedColor.SOMETHING) {
-                    launch1ball();
-                }
-                else {
-                    isDone = true;
                 }
 
                 if (isDone) {
@@ -280,17 +249,8 @@ public class AutoBottomBlue extends OpMode {
 
             case 4:
 
-                if (!follower.isBusy() && detectedColorBottom == ColorSensorBottom.DetectedColor.SOMETHING) {
+                if (pathTimer.getElapsedTimeSeconds() > 4) {
                     launch3balls();
-                }
-                else if (!follower.isBusy() && detectedColorMiddle == ColorSensorMiddle.DetectedColor.SOMETHING) {
-                    launch2balls();
-                }
-                else if (!follower.isBusy() && detectedColorTop == ColorSensorTop.DetectedColor.SOMETHING) {
-                    launch1ball();
-                }
-                else {
-                    isDone = true;
                 }
 
                 if (isDone) {
